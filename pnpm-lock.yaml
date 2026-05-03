@@ -9,14 +9,14 @@ importers:
   .:
     dependencies:
       '@actunime/types':
-        specifier: ^1.13.0-beta.7
-        version: 1.13.0-beta.7
+        specifier: 1.13.0-beta.8
+        version: 1.13.0-beta.8
       '@actunime/ui':
         specifier: link:../ui
         version: link:../ui
       '@actunime/validations':
-        specifier: ^1.7.0-beta.7
-        version: 1.7.0-beta.7
+        specifier: 1.7.0-beta.8
+        version: 1.7.0-beta.8
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.72.1(react@19.2.5))
@@ -147,12 +147,12 @@ importers:
 
 packages:
 
-  '@actunime/types@1.13.0-beta.7':
-    resolution: {integrity: sha512-yywwVJCYZNy+1vq7z0b1BBNhmVIJZCErG95xSsZZykhSWUuwtxdtMTFRXqf0Jp51mls9xDP9XjPR7eB+QLmyFA==, tarball: https://npm.pkg.github.com/download/@actunime/types/1.13.0-beta.7/087a9f3f85709423ea79f9ef16e28004ec23fb0a}
+  '@actunime/types@1.13.0-beta.8':
+    resolution: {integrity: sha512-QbQriVRZj8yD/U0lBCiIGKWzNXvPcFpMRAPTPU1CBjg+0IDOXqFqeBMgC9onoCrHPmJ5GwmyLrz2VF3wyCghAg==, tarball: https://npm.pkg.github.com/download/@actunime/types/1.13.0-beta.8/6043f728ced12225c750e65084777b8e45e27045}
     engines: {node: '>=22'}
 
-  '@actunime/validations@1.7.0-beta.7':
-    resolution: {integrity: sha512-hNA/ZZUz+pYz/TFEiFguVJmLIAQX61hE8IBcKsn6z5H8UP6G5gkHgHqNSCq4c+lRmzaz+N3+9irAnZCO1HRuaA==, tarball: https://npm.pkg.github.com/download/@actunime/validations/1.7.0-beta.7/4305fcd5f5403ec8e23d6be9a5c8bbf04bfa1cea}
+  '@actunime/validations@1.7.0-beta.8':
+    resolution: {integrity: sha512-uiosLebfurLRq+jYxA4ItmjPfWU11XrF4eOA5kSdLTFgwFEY578GXz4/qkcSnbtQHvNyUDBFU/DpnPWXz1vI8g==, tarball: https://npm.pkg.github.com/download/@actunime/validations/1.7.0-beta.8/9d2426f1bd0bca38bd420e24e0d7444608fdd2db}
     engines: {node: '>=22'}
 
   '@babel/code-frame@7.29.0':
@@ -3166,8 +3166,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  uuid@13.0.0:
-    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
+  uuid@13.0.1:
+    resolution: {integrity: sha512-9ezox2roIft6ExBVTVqibSd5dc5/47Sw/uY6b4SjQUT2TzQ0tltNquWA46y4xPQmdZYqvnio22SgWd41M86+jw==}
     hasBin: true
 
   validate-npm-package-license@3.0.4:
@@ -3328,17 +3328,17 @@ packages:
 
 snapshots:
 
-  '@actunime/types@1.13.0-beta.7': {}
+  '@actunime/types@1.13.0-beta.8': {}
 
-  '@actunime/validations@1.7.0-beta.7':
+  '@actunime/validations@1.7.0-beta.8':
     dependencies:
-      '@actunime/types': 1.13.0-beta.7
+      '@actunime/types': 1.13.0-beta.8
       '@esbuild-plugins/node-resolve': 0.2.2(esbuild@0.25.12)
       deep-object-diff: 1.1.9
       esbuild: 0.25.12
       flat: 6.0.1
       tsx: 4.21.0
-      uuid: 13.0.0
+      uuid: 13.0.1
       zod: 3.25.76
     transitivePeerDependencies:
       - supports-color
@@ -6179,7 +6179,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  uuid@13.0.0: {}
+  uuid@13.0.1: {}
 
   validate-npm-package-license@3.0.4:
     dependencies:

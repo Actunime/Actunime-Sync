@@ -27,9 +27,9 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@actunime/types": "^1.13.0-beta.7",
+    "@actunime/types": "1.13.0-beta.8",
     "@actunime/ui": "link:../ui",
-    "@actunime/validations": "^1.7.0-beta.7",
+    "@actunime/validations": "1.7.0-beta.8",
     "@hookform/resolvers": "^5.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
