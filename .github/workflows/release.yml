@@ -1,0 +1,93 @@
+name: Release
+
+# Secrets requis (Settings → Secrets and variables → Actions) :
+#   - GH_TOKEN          : PAT avec scopes `repo` + `read:packages`
+#   - BETA_API_URL      : ex. https://api.beta.actunime.fr
+#   - BETA_WEB_URL      : ex. https://beta.actunime.fr
+#   - PROD_API_URL      : ex. https://api.actunime.fr
+#   - PROD_WEB_URL      : ex. https://actunime.fr
+# Le workflow choisit BETA_* ou PROD_* selon la branche poussée.
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - beta
+      - production
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Token requis pour que semantic-release puisse pousser le commit
+          # `chore(release): X.Y.Z` + le tag.
+          persist-credentials: false
+
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Authentification au registre GitHub Packages
+        # Nécessaire pour résoudre les dépendances `@actunime/*` privées.
+        run: |
+          touch .npmrc
+          echo "@actunime:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
+
+      - name: Installation de pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Récupération du chemin du store pnpm
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache du store pnpm
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Installation des dépendances
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build de l'extension
+        env:
+          VITE_API_URL: ${{ github.ref_name == 'production' && secrets.PROD_API_URL || secrets.BETA_API_URL }}
+          VITE_WEB_URL: ${{ github.ref_name == 'production' && secrets.PROD_WEB_URL || secrets.BETA_WEB_URL }}
+        run: pnpm build
+
+      - name: Génération du .zip de la prochaine version
+        # On lit le `nextRelease.version` que semantic-release calculerait, puis on
+        # zippe `dist/` avec ce nom. semantic-release attache ensuite le fichier
+        # à la release via le pattern `dist/actunime-sync-*.zip`.
+        run: |
+          NEXT_VERSION=$(pnpm dlx semantic-release --dry-run | grep "next release version is" | sed -E 's/.*is ([0-9].*)/\1/' | tail -n1)
+          if [ -z "$NEXT_VERSION" ]; then
+            echo "Aucune nouvelle version à publier — fin du job."
+            exit 0
+          fi
+          ZIP_NAME="actunime-sync-v${NEXT_VERSION}.zip"
+          echo "Création de $ZIP_NAME"
+          cd dist && zip -r "../dist/${ZIP_NAME}" . && cd ..
+          ls -la dist/
+
+      - name: Publication via semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: pnpm dlx semantic-release
