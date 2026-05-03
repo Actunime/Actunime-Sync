@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@actunime/types": "1.13.0-beta.8",
-    "@actunime/ui": "link:../ui",
+    "@actunime/ui": "1.2.0-beta.13",
     "@actunime/validations": "1.7.0-beta.8",
     "@hookform/resolvers": "^5.2.2",
     "class-variance-authority": "^0.7.1",
