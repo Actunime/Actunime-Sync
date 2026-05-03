@@ -1,3 +1,10 @@
+# 1.0.0-beta.1 (2026-05-03)
+
+
+### Features
+
+* extension v0.1 — tracking, auth and configuration wizard ([4b93dc5](https://github.com/Actunime/Actunime-Sync/commit/4b93dc5ac722f8587e82a17381c64bea6990549d))
+
 # Changelog
 
 Toutes les modifications notables d'Actunime Sync sont documentées ici.
