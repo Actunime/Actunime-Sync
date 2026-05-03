@@ -35,7 +35,7 @@ jobs:
       - name: Configuration de Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Authentification au registre GitHub Packages
         # Nécessaire pour résoudre les dépendances `@actunime/*` privées.
@@ -75,6 +75,8 @@ jobs:
         # On lit le `nextRelease.version` que semantic-release calculerait, puis on
         # zippe `dist/` avec ce nom. semantic-release attache ensuite le fichier
         # à la release via le pattern `dist/actunime-sync-*.zip`.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           NEXT_VERSION=$(pnpm dlx semantic-release --dry-run | grep "next release version is" | sed -E 's/.*is ([0-9].*)/\1/' | tail -n1)
           if [ -z "$NEXT_VERSION" ]; then
