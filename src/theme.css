@@ -1,0 +1,4 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@actunime/ui/theme.css';
+@source "../node_modules/@actunime/ui/dist/**/*.{js,ts,jsx,tsx}";
