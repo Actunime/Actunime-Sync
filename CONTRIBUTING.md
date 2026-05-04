@@ -12,13 +12,28 @@ seuls les identifiants techniques (noms de fichiers, types, branches) restent en
 - **pnpm 9+**
 - Un navigateur Chromium (Chrome, Edge, Brave…) ou Firefox récent
 
+Aucune dépendance privée, aucun PAT GitHub à configurer pour cloner et builder.
+
 ## Démarrage
 
 ```bash
 git clone https://github.com/Actunime/Actunime-Sync.git
 cd Actunime-Sync
 pnpm install
-pnpm dev          # build en watch mode dans dist/
+```
+
+Crée un fichier `.env.development` à la racine avec les URL de l'API et du site
+Actunime que tu utilises (laisse `localhost` pour le développement local) :
+
+```env
+VITE_API_URL=http://localhost:3000
+VITE_WEB_URL=http://localhost:3002
+```
+
+Puis lance le build watch :
+
+```bash
+pnpm dev
 ```
 
 Charge le dossier `dist/` via `chrome://extensions` → mode développeur →
@@ -29,7 +44,8 @@ Charge le dossier `dist/` via `chrome://extensions` → mode développeur →
 | Commande | Description |
 |---|---|
 | `pnpm dev` | Build watch mode (HMR) |
-| `pnpm build` | Build production (TypeScript check + Vite) |
+| `pnpm build` | Build production (TypeScript check + Vite). Mode `development` ou `production` selon `--mode` |
+| `pnpm build:icons` | Régénère les icônes 16/32/48/128 depuis `public/icons/source.png` |
 | `pnpm type-check` | Vérification TypeScript sans émission |
 | `pnpm lint` | ESLint avec auto-fix |
 | `pnpm format` | Prettier |
@@ -95,8 +111,11 @@ Format : `type(scope): description`
 ### Scopes acceptés
 
 `popup`, `options`, `background`, `content`, `wizard`, `strategies`, `overlay`,
-`progress`, `shared`, `messaging`, `storage`, `api-client`, `manifest`, `deps`,
-`config`, `ci`, `release`.
+`progress`, `image-pick`, `shared`, `messaging`, `storage`, `api-client`,
+`auth-flow`, `update-checker`, `manifest`, `theme`, `deps`, `config`, `ci`,
+`release`, `docs`.
+
+La liste exhaustive est définie dans `commitlint.config.mjs` à la racine.
 
 ### Exemples
 
@@ -105,7 +124,7 @@ feat(wizard): support des 4 stratégies de détection
 fix(content): pick visuel ne capturait pas les <img> dans des wrappers
 refactor(strategies): extraire la logique commune dans strategies/index
 docs(readme): ajouter la section confidentialité
-chore(deps): bump @actunime/types vers 1.13.0-beta.7
+chore(deps): bump react vers 19.2.4
 ```
 
 Husky bloque les commits non conformes via `commitlint`. Si tu n'arrives pas à

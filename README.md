@@ -27,6 +27,8 @@ sans clic à chaque épisode.
 - **Aucun pattern précâblé** : tout est configuré par toi (ou importé depuis un
   partage communautaire). L'extension n'embarque aucune connaissance préalable
   des sites.
+- **Notification de mise à jour** : l'extension vérifie quotidiennement les
+  nouvelles releases sur GitHub et te prévient quand une mise à jour est dispo.
 
 ## Installation
 
@@ -42,13 +44,29 @@ sans clic à chaque épisode.
 7. Visite un site de streaming, clique l'icône Actunime Sync dans la barre d'outils,
    puis **« Ajouter ce site »** — l'assistant de configuration s'ouvre.
 
+> **Mises à jour** : tant que l'extension n'est pas publiée sur le Chrome Web
+> Store, elle ne se met pas à jour automatiquement. L'extension détecte
+> elle-même les nouvelles versions sur GitHub Releases (check quotidien) et
+> affiche un bandeau dans le popup avec un lien direct vers la dernière `.zip`.
+> Il suffit alors de remplacer le contenu du dossier décompressé puis de
+> recharger l'extension dans `chrome://extensions`.
+
 ### Pour les développeurs
+
+Aucune dépendance privée, aucun token GitHub à configurer. Clone, install, build :
 
 ```bash
 git clone https://github.com/Actunime/Actunime-Sync.git
 cd Actunime-Sync
 pnpm install
-pnpm build
+pnpm build --mode development
+```
+
+Crée un fichier `.env.development` à la racine avec les URL de l'API et du site Actunime que tu utilises (par défaut le local) :
+
+```env
+VITE_API_URL=http://localhost:3000
+VITE_WEB_URL=http://localhost:3002
 ```
 
 Charge ensuite le dossier `dist/` via `chrome://extensions` comme ci-dessus.
@@ -57,6 +75,12 @@ Pour le développement avec hot-reload :
 
 ```bash
 pnpm dev
+```
+
+Pour régénérer les icônes (16, 32, 48, 128 px) à partir de `public/icons/source.png` :
+
+```bash
+pnpm build:icons
 ```
 
 ## Architecture
