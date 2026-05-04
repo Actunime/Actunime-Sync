@@ -1,6 +1,6 @@
 {
   "name": "actunime-sync",
-  "version": "0.0.0",
+  "version": "1.0.0-beta.3",
   "description": "Extension de synchronisation et suivi des animes & mangas avec Actunime",
   "private": true,
   "license": "GPL-3.0-or-later",

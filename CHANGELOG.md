@@ -1,3 +1,10 @@
+# [1.0.0-beta.3](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2026-05-04)
+
+
+### Bug Fixes
+
+* **release:** bumper package.json automatiquement via @semantic-release/npm ([4d97bd7](https://github.com/Actunime/Actunime-Sync/commit/4d97bd70bfacb327b0c4af4134273400b211f96a))
+
 # [1.0.0-beta.2](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2026-05-03)
 
 
