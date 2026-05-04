@@ -31,6 +31,7 @@ export interface ProgressUpdatePayload {
   url: string;
   title: string;
   episode?: number;
+  chapter?: number;
   season?: number;
   slug?: string;
   seriesId?: string;
@@ -43,18 +44,30 @@ export interface ProgressUpdatePayload {
  * Candidat retourné par le matcher quand l'user doit confirmer.
  * Inclut le statut existant côté liste utilisateur si l'anime est déjà suivi.
  */
-export interface CandidateAnime {
+export interface CandidateMedia {
   id: string;
+  mediaType: 'Anime' | 'Manga';
   title: string;
   alias?: string[];
   coverUrl?: string | null;
   year?: number | null;
   score: number;
-  /** Statut de l'anime dans la liste de l'user, si présent. */
+  /**
+   * `true` si ce candidat est une proposition PENDING (pas encore validée par
+   * le staff). Confirmer dessus crée une list entry attachée à la proposal —
+   * l'œuvre se trouvera dans la liste user en attente de validation.
+   */
+  isPending?: boolean;
+  /** ID de la proposal (présent uniquement si `isPending: true`). */
+  proposalId?: string;
+  /** Nombre d'utilisateurs qui appuient cette proposition. */
+  supportCount?: number;
+  /** Statut de l'anime/manga dans la liste de l'user, si présent. */
   existingListEntry?: {
     id: string;
     status: string;
     episodesWatched?: number;
+    chaptersRead?: number;
     rewatchCount?: number;
   } | null;
 }
@@ -67,11 +80,13 @@ export interface CandidateAnime {
 export interface UndoSnapshot {
   /** ID de la list entry impactée. */
   listEntryId: string;
-  /** Valeur d'`episodesWatched` AVANT le push (pour revert). */
+  /** Valeur d'`episodesWatched` AVANT le push (pour revert anime). */
   previousEpisodesWatched?: number;
+  /** Valeur de `chaptersRead` AVANT le push (pour revert manga). */
+  previousChaptersRead?: number;
   /** Statut AVANT le push (à revert si on a écrasé un statut différent). */
   previousStatus?: string;
-  /** `rewatchCount` AVANT le push (revert si on l'a incrémenté). */
+  /** `rewatchCount` AVANT le push (revert si on l'a incrémenté, anime uniquement). */
   previousRewatchCount?: number;
   /** `true` si le push a créé l'entry (l'undo doit la DELETE). */
   wasCreated: boolean;
@@ -83,12 +98,34 @@ export type TrackResultPayload =
       actunimeEntityId: string;
       matchedTitle?: string;
       episodesWatched?: number;
+      chaptersRead?: number;
       isRewatch?: boolean;
       /** Permet à l'user d'annuler le push via un toast. */
       undo?: UndoSnapshot;
+      /**
+       * Le numéro courant (épisode/chapitre lu sur le site) est INFÉRIEUR à la
+       * progression déjà enregistrée dans la liste user. Aucun push API n'a été
+       * effectué. Le content script affiche un dialog pour demander quoi faire
+       * (régresser la liste, ou rester silencieux jusqu'au rattrapage).
+       */
+      behind?: {
+        listCount: number;
+        currentNumber: number;
+        seriesKey: string;
+        listEntryId: string;
+        kind: 'anime' | 'manga';
+      };
     }
   | { success: false; error: string }
   | { success: false; ignored: true };
+
+/**
+ * Action user après dialog "tu es derrière ta liste" — appelée via
+ * `RESOLVE_BEHIND` pour appliquer le choix côté tracker.
+ */
+export type BehindResolution =
+  | { action: 'regress'; seriesKey: string; listEntryId: string; targetCount: number; kind: 'anime' | 'manga' }
+  | { action: 'catch-up'; seriesKey: string };
 
 /**
  * Réponse à un DISCOVER_SERIES (à `playing`). Le but est uniquement
@@ -97,6 +134,7 @@ export type TrackResultPayload =
 export interface ExistingListEntrySummary {
   status: string;
   episodesWatched?: number;
+  chaptersRead?: number;
   rewatchCount?: number;
 }
 
@@ -114,9 +152,10 @@ export type DiscoveryResultPayload =
   | {
       state: 'needs_confirmation';
       seriesKey: string;
-      candidates: CandidateAnime[];
+      candidates: CandidateMedia[];
       detection: {
         title: string;
+        chapter?: number;
         episode?: number;
         season?: number;
       };
@@ -129,7 +168,13 @@ export type DiscoveryResultPayload =
  * la décision côté storage.
  */
 export type ConfirmResultPayload =
-  | { state: 'cached'; seriesKey: string; matchedTitle: string; coverUrl?: string | null }
+  | {
+      state: 'cached';
+      seriesKey: string;
+      matchedTitle: string;
+      coverUrl?: string | null;
+      existingListEntry?: ExistingListEntrySummary | null;
+    }
   | { state: 'ignored' }
   | { state: 'skipped' }
   | { state: 'error'; error: string };
@@ -142,12 +187,12 @@ export type DetectionStatusPayload =
       kind: 'anime' | 'manga';
       title: string;
       episode?: number;
+      chapter?: number;
       season?: number;
       slug?: string;
       seriesId?: string;
       seriesSlug?: string;
       url: string;
-      progressRatio?: number;
     };
 
 export interface MatchRequestPayload {
@@ -158,13 +203,14 @@ export interface MatchRequestPayload {
   seriesId?: string;
   seriesSlug?: string;
   season?: number;
+  kind?: 'anime' | 'manga';
 }
 
 /**
  * Minimale : juste ce dont le popup a besoin pour afficher une card.
  * Subset du `SearchAnime` retourné par l'API.
  */
-export interface MatchedAnimeSummary {
+export interface MatchedMediaSummary {
   id: string;
   title: string;
   alias?: string[];
@@ -189,7 +235,7 @@ export interface MatchedAnimeSummary {
 }
 
 export type MatchResultPayload =
-  | { matched: true; anime: MatchedAnimeSummary; score: number }
+  | { matched: true; media: MatchedMediaSummary; score: number }
   | { matched: false; reason: 'no_match' | 'not_authenticated' | 'error'; error?: string };
 
 /**
@@ -201,13 +247,20 @@ export type ConfirmTrackPayload =
   | {
       action: 'confirm';
       seriesKey: string;
-      chosenAnimeId: string;
+      chosenMediaId: string;
       /** Titre Actunime affiché dans le badge / cache (pas le titre du site). */
       chosenTitle: string;
       /** Cover Actunime pour affichage dans le badge ultérieur. */
       chosenCoverUrl?: string | null;
       /** Mémorise l'intention « rewatch » dans le cache (utilisée au push 85 %). */
       isRewatch: boolean;
+      /**
+       * Si défini, le candidat est une proposition PENDING — on crée une list
+       * entry attachée à la proposal au lieu de cacher un mediaId.
+       */
+      proposalId?: string;
+      /** Type de média (utilisé quand on attache à une proposal pending). */
+      kind?: 'anime' | 'manga';
     }
   | { action: 'skip' }
   | { action: 'ignore_series'; seriesKey: string };
@@ -216,7 +269,7 @@ export type ExtensionMessage =
   | { type: 'DISCOVER_SERIES'; payload: ProgressUpdatePayload }
   | { type: 'PROGRESS_UPDATE'; payload: ProgressUpdatePayload }
   | { type: 'CONFIRM_TRACK'; payload: ConfirmTrackPayload }
-  | { type: 'RESEARCH_QUERY'; payload: { query: string } }
+  | { type: 'RESEARCH_QUERY'; payload: { query: string; kind?: 'anime' | 'manga' } }
   | { type: 'SUGGEST_ALIAS'; payload: { animeId: string; alias: string } }
   | {
       type: 'OPEN_CONTRIBUTION_TAB';
@@ -241,7 +294,7 @@ export type ExtensionMessage =
   | {
       type: 'REPORT_TRACKING_STATE';
       payload: {
-        mode: 'video' | 'audio' | null;
+        mode: 'audio' | 'manual' | null;
         engagementReached: boolean;
         cumulativeMs: number;
         confirmed: boolean;
@@ -251,8 +304,7 @@ export type ExtensionMessage =
   | { type: 'GET_TRACKING_STATE_FOR_TAB'; payload: { tabId: number } }
   | { type: 'MARK_AS_WATCHED_NOW' }
   | { type: 'UNDO_LAST_PUSH'; payload: UndoSnapshot }
-  | { type: 'FRAME_PLAY_START'; payload: { frameUrl: string } }
-  | { type: 'FRAME_THRESHOLD_REACHED'; payload: { frameUrl: string; ratio: number } }
+  | { type: 'RESOLVE_BEHIND'; payload: BehindResolution }
   | { type: 'LAUNCH_CONFIG_WIZARD' }
   | { type: 'SAVE_LEARNED_PATTERN'; payload: { pattern: LearnedPattern } }
   | { type: 'REMOVE_LEARNED_PATTERN'; payload: { host: string } }
@@ -260,24 +312,31 @@ export type ExtensionMessage =
   | { type: 'GET_LEARNED_PATTERN'; payload: { host: string } }
   | { type: 'CHECK_API_HEALTH' }
   | {
-      type: 'CONTRIBUTE_PROPOSE_ANIME';
+      type: 'CONTRIBUTE_PROPOSE_MEDIA';
       payload: {
+        kind: 'anime' | 'manga';
         title: string;
+        /** Synonymes / titres alternatifs (anglais, original, abréviations…). */
+        aliases?: string[];
         format: string;
         country: string;
         status: string;
         coverDataUrl: string;
+        /** Numéro initial à pré-remplir dans la list entry (épisode pour anime, chapitre pour manga). */
         episode?: number;
-        /** Statut de la list entry créée. Défaut côté form : `WATCHING`. */
+        chapter?: number;
+        /** Statut de la list entry créée. Défaut form : `WATCHING` (anime) / `READING` (manga). */
         listStatus?: string;
       };
     }
   | {
       type: 'OPEN_CONTRIBUTION_FORM';
       payload: {
+        kind?: 'anime' | 'manga';
         title: string;
         season?: number;
         episode?: number;
+        chapter?: number;
         sourceUrl?: string;
       };
     }
@@ -310,7 +369,7 @@ export interface ListActivatedHostsResultPayload {
 }
 
 export interface TrackingStatePayload {
-  mode: 'video' | 'audio' | null;
+  mode: 'audio' | 'manual' | null;
   engagementReached: boolean;
   cumulativeMs: number;
   /** L'œuvre est confirmée dans le cache (= prête à push). */
@@ -354,7 +413,7 @@ export interface CheckApiHealthResultPayload {
   ok: boolean;
 }
 
-export type ContributeProposeAnimeResultPayload =
+export type ContributeProposeMediaResultPayload =
   | {
       ok: true;
       proposalId: string;
@@ -364,18 +423,11 @@ export type ContributeProposeAnimeResultPayload =
     }
   | { ok: false; error: string };
 
-/**
- * Message dispatché du SW vers le top frame quand une sub-frame signale qu'une
- * vidéo joue. Permet au top frame de déclencher sa logique de discovery / push
- * sans observer lui-même le `<video>` de l'iframe.
- */
 export type IframeRelayMessage =
-  | { type: 'IFRAME_PLAY_START'; payload: { frameUrl: string } }
-  | { type: 'IFRAME_THRESHOLD_REACHED'; payload: { frameUrl: string; ratio: number } }
   | { type: 'TAB_AUDIBLE_CHANGED'; payload: { audible: boolean } };
 
 export interface ResearchResultPayload {
-  candidates: CandidateAnime[];
+  candidates: CandidateMedia[];
   /** Vide si l'API ne renvoie rien. */
   empty?: boolean;
   error?: string;
@@ -414,7 +466,7 @@ export type ExtensionResponse =
   | ListLearnedPatternsResultPayload
   | GetLearnedPatternResultPayload
   | CheckApiHealthResultPayload
-  | ContributeProposeAnimeResultPayload
+  | ContributeProposeMediaResultPayload
   | { authenticated: boolean }
   | DetectionStatusPayload
   | MatchResultPayload

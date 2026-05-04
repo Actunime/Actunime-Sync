@@ -39,6 +39,7 @@ export function useMatchedAnime(detection: DetectionStatusPayload | null): UseMa
             seriesId: detection.seriesId,
             seriesSlug: detection.seriesSlug,
             season: detection.season,
+            kind: detection.kind,
           },
         });
         if (!cancelled) setMatch(result);

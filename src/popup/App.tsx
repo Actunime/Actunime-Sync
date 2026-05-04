@@ -16,7 +16,6 @@ import {
   Loader2,
   LogIn,
   LogOut,
-  PlayCircle,
   Plus,
   Settings2,
   ThumbsUp,
@@ -54,6 +53,10 @@ export function App() {
     Awaited<ReturnType<typeof storage.getPendingContribution>>
   >(null);
   const [pendingChecked, setPendingChecked] = useState(false);
+  const [pendingSuccess, setPendingSuccess] = useState<{
+    kind: 'anime' | 'manga';
+    joinedExisting: boolean;
+  } | null>(null);
   useEffect(() => {
     void (async () => {
       const pending = await storage.getPendingContribution();
@@ -152,20 +155,36 @@ export function App() {
         </section>
       )}
 
-      {!loading && auth && pendingChecked && pendingContribution && (
+      {!loading && auth && pendingChecked && pendingContribution && !pendingSuccess && (
         <section className="flex flex-col gap-3">
           <ContributionForm
+            detectedKind={pendingContribution.kind}
             detectedTitle={pendingContribution.title}
             detectedEpisode={pendingContribution.episode}
+            detectedChapter={pendingContribution.chapter}
             onCancel={() => {
               void clearPending();
             }}
-            onSuccess={() => {
+            onSuccess={(joinedExisting) => {
+              setPendingSuccess({
+                kind: pendingContribution.kind ?? 'anime',
+                joinedExisting,
+              });
               void clearPending();
-              window.close();
             }}
           />
         </section>
+      )}
+
+      {!loading && auth && pendingSuccess && (
+        <ContributionSuccessCard
+          kind={pendingSuccess.kind}
+          joinedExisting={pendingSuccess.joinedExisting}
+          onClose={() => {
+            setPendingSuccess(null);
+            window.close();
+          }}
+        />
       )}
 
       {!loading && auth && pendingChecked && !pendingContribution && (
@@ -283,6 +302,53 @@ function QuickAction({ icon: Icon, label, onClick }: Readonly<IQuickActionProps>
   );
 }
 
+interface IContributionSuccessCardProps {
+  kind: 'anime' | 'manga';
+  joinedExisting: boolean;
+  onClose: () => void;
+}
+
+function ContributionSuccessCard({
+  kind,
+  joinedExisting,
+  onClose,
+}: Readonly<IContributionSuccessCardProps>) {
+  const listPath = kind === 'manga' ? '/profile/mangas' : '/profile/animes';
+  const itemWord = kind === 'manga' ? 'manga' : 'anime';
+  const message = joinedExisting
+    ? `Un autre utilisateur avait déjà proposé cet ${itemWord} — tu rejoins sa proposition. ` +
+      `L'œuvre est maintenant dans ta liste, vous validerez ensemble.`
+    : `Ta proposition est envoyée. L'${itemWord} est ajouté à ta liste en attendant la validation par l'équipe Actunime.`;
+  return (
+    <section className="rounded-md border border-success/40 bg-success/5 p-4 flex flex-col gap-3">
+      <div className="flex items-start gap-2">
+        <CheckCircle2 className="size-5 text-success flex-shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold text-foreground">
+            {joinedExisting ? 'Proposition existante rejointe' : 'Proposition envoyée'}
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">{message}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => openWebUrl(listPath)}
+          className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <ExternalLink className="size-3.5" />
+          Voir ma liste
+        </button>
+        <button
+          onClick={onClose}
+          className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-transparent px-3 py-2 text-xs font-medium hover:bg-muted"
+        >
+          Fermer
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function SiteActivationCard() {
   const { host, state, canActivate, activating, activate, lastResult } = useSiteActivation();
 
@@ -307,7 +373,7 @@ function SiteActivationCard() {
         <div className="text-xs text-muted-foreground leading-relaxed">
           Ajoute <strong className="text-foreground">{host}</strong> à ta liste de sites
           suivis. L'assistant de configuration s'ouvrira directement après pour identifier
-          le titre et l'épisode dans la page.
+          le titre et le numéro dans la page.
         </div>
       </div>
       <button
@@ -396,17 +462,12 @@ function DetectedAnimeCard({
     }
   };
 
-  const progressPercent =
-    typeof detection.progressRatio === 'number'
-      ? Math.round(detection.progressRatio * 100)
-      : null;
-
-  const matchedTitle = match?.matched ? match.anime.title : null;
-  const matchedYear = match?.matched ? match.anime.year : null;
-  const matchedCover = match?.matched ? match.anime.coverUrl : null;
-  const isPending = match?.matched === true && match.anime.isPending === true;
+  const matchedTitle = match?.matched ? match.media.title : null;
+  const matchedYear = match?.matched ? match.media.year : null;
+  const matchedCover = match?.matched ? match.media.coverUrl : null;
+  const isPending = match?.matched === true && match.media.isPending === true;
   const pendingSupportCount =
-    isPending && match?.matched === true ? match.anime.supportCount : undefined;
+    isPending && match?.matched === true ? match.media.supportCount : undefined;
   const notInActunime = !matchLoading && match?.matched === false;
 
   // Le flow contribution est inline (mini-form dans le popup) — plus de
@@ -414,8 +475,10 @@ function DetectedAnimeCard({
   if (contributing) {
     return (
       <ContributionForm
+        detectedKind={detection.kind}
         detectedTitle={detection.title}
         detectedEpisode={detection.episode}
+        detectedChapter={detection.chapter}
         onCancel={() => setContributing(false)}
         onSuccess={(joinedExisting) => {
           setContributing(false);
@@ -427,31 +490,22 @@ function DetectedAnimeCard({
 
   if (contributedFlash) {
     return (
-      <div className="rounded-md border border-success/40 bg-success/5 p-3 flex items-start gap-2 text-xs">
-        <CheckCircle2 className="size-4 text-success flex-shrink-0 mt-0.5" />
-        <div className="text-foreground leading-relaxed">
-          {contributedFlash === 'joined' ? (
-            <>
-              <strong>Proposition existante rejointe.</strong> Un autre utilisateur avait déjà
-              proposé cette œuvre — elle est ajoutée à ta liste, vous validerez ensemble.
-            </>
-          ) : (
-            <>
-              <strong>Proposition envoyée.</strong> L'œuvre est dans ta liste en attendant
-              la validation par l'équipe Actunime.
-            </>
-          )}
-        </div>
-      </div>
+      <ContributionSuccessCard
+        kind={detection.kind}
+        joinedExisting={contributedFlash === 'joined'}
+        onClose={() => setContributedFlash(null)}
+      />
     );
   }
+
+  const isManga = detection.kind === 'manga';
 
   return (
     <div className="rounded-md border border-primary/30 bg-primary/5 p-3 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Eye className="size-4 text-primary flex-shrink-0" />
         <p className="text-xs uppercase tracking-wide text-primary font-medium">
-          En cours de visionnage
+          {isManga ? 'En cours de lecture' : 'En cours de visionnage'}
         </p>
       </div>
 
@@ -488,29 +542,19 @@ function DetectedAnimeCard({
             </p>
           )}
 
-          {detection.episode !== undefined && (
+          {(isManga ? detection.chapter : detection.episode) !== undefined && (
             <p className="text-xs text-muted-foreground mt-auto">
-              Épisode {detection.episode}
-              {detection.season !== undefined ? ` · Saison ${detection.season}` : ''}
+              {isManga
+                ? `Chapitre ${detection.chapter}`
+                : `Épisode ${detection.episode}`}
+              {!isManga && detection.season !== undefined
+                ? ` · Saison ${detection.season}`
+                : ''}
             </p>
           )}
         </div>
       </div>
 
-      {progressPercent !== null && !notInActunime && (
-        <div className="flex items-center gap-2">
-          <PlayCircle className="size-3.5 text-muted-foreground flex-shrink-0" />
-          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <span className="text-xs text-muted-foreground tabular-nums w-9 text-right">
-            {progressPercent}%
-          </span>
-        </div>
-      )}
 
       {notInActunime ? (
         <div className="flex flex-col gap-2">
@@ -528,6 +572,7 @@ function DetectedAnimeCard({
         </div>
       ) : matchedTitle ? (
         <TrackingFooter
+          kind={detection.kind}
           mode={tracking?.mode ?? null}
           engagementReached={!!tracking?.engagementReached}
           cumulativeMs={tracking?.cumulativeMs ?? 0}
@@ -542,12 +587,8 @@ function DetectedAnimeCard({
   );
 }
 
-/**
- * Footer du DetectedAnimeCard : affiche selon le mode de tracking actif.
- * - Mode video : info « marqué auto à 85 % »
- * - Mode audio : info temps écoulé + bouton « Marquer vu » dès engagement (10 min)
- */
 function TrackingFooter({
+  kind,
   mode,
   engagementReached,
   cumulativeMs,
@@ -555,18 +596,24 @@ function TrackingFooter({
   markedFlash,
   onMarkAsWatched,
 }: Readonly<{
-  mode: 'video' | 'audio' | null;
+  kind: 'anime' | 'manga';
+  mode: 'audio' | 'manual' | null;
   engagementReached: boolean;
   cumulativeMs: number;
   marking: boolean;
   markedFlash: 'idle' | 'ok' | 'error';
   onMarkAsWatched: () => void | Promise<void>;
 }>) {
+  const isManga = kind === 'manga';
+  const itemWord = isManga ? 'chapitre' : 'épisode';
+  const consumedVerb = isManga ? 'lu' : 'vu';
+  const markBtnLabel = `Marquer ce ${itemWord} comme ${consumedVerb}`;
+
   if (markedFlash === 'ok') {
     return (
       <p className="text-xs text-success flex items-center gap-1.5">
         <CheckCircle2 className="size-3.5" />
-        Épisode marqué vu sur Actunime.
+        {`${isManga ? 'Chapitre' : 'Épisode'} marqué ${consumedVerb} sur Actunime.`}
       </p>
     );
   }
@@ -579,11 +626,20 @@ function TrackingFooter({
     );
   }
 
-  if (mode === 'video') {
+  if (isManga || mode === 'manual') {
     return (
-      <p className="text-xs text-muted-foreground">
-        L'épisode que tu regardes sera mis à jour automatiquement dans ta liste.
-      </p>
+      <button
+        onClick={onMarkAsWatched}
+        disabled={marking}
+        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-success/15 border border-success/40 px-3 py-1.5 text-xs font-medium text-success hover:bg-success/25 disabled:opacity-50"
+      >
+        {marking ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <CheckCircle2 className="size-3.5" />
+        )}
+        {markBtnLabel}
+      </button>
     );
   }
 
@@ -605,7 +661,7 @@ function TrackingFooter({
             ) : (
               <CheckCircle2 className="size-3.5" />
             )}
-            Marquer cet épisode comme vu
+            {markBtnLabel}
           </button>
         ) : (
           <p className="text-[10px] text-muted-foreground italic">
@@ -736,6 +792,8 @@ function strategyLabel(strategy: string): string {
       return 'Open Graph';
     case 'url-tokens':
       return "URL tokens";
+    case 'document-title':
+      return 'Titre de la page';
     case 'dom-selectors':
       return 'Sélecteurs DOM';
     case 'manual':

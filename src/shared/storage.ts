@@ -23,27 +23,26 @@ export interface Preferences {
   enabledSites: Record<string, boolean>;
 }
 
-export interface MatchingEntry {
-  /** mediaId Actunime si l'œuvre est validée, listEntryId si pending. */
-  actunimeEntityId: string;
-  /**
-   * Présent quand l'œuvre n'est pas encore validée par le staff (proposition
-   * en attente). Le push de progression se fait directement via
-   * `PUT /lists/<listEntryId>` au lieu de passer par `getListByMedia`.
-   */
-  pendingListEntryId?: string;
-  /** Titre Actunime (pour affichage badge / popup). */
-  title: string;
-  /** Cover Actunime (pour affichage badge / popup). */
-  coverUrl?: string | null;
-  confirmedAt: number;
-  /**
-   * L'utilisateur a indiqué (au moment de la confirmation) qu'il rewatch
-   * cette série. Le 1er push d'épisode incrémente `rewatchCount` côté API.
-   * Reset à `false` automatiquement après le 1er push consommé.
-   */
-  isRewatch?: boolean;
-}
+export type MatchingEntry =
+  | {
+      kind: 'media';
+      mediaId: string;
+      mediaType: 'Anime' | 'Manga';
+      title: string;
+      coverUrl?: string | null;
+      confirmedAt: number;
+      isRewatch?: boolean;
+      catchupTarget?: number;
+    }
+  | {
+      kind: 'pending';
+      listEntryId: string;
+      mediaType: 'Anime' | 'Manga';
+      title: string;
+      coverUrl?: string | null;
+      confirmedAt: number;
+      catchupTarget?: number;
+    };
 
 export interface LocalState {
   auth: AuthState | null;
@@ -78,8 +77,10 @@ export interface LocalState {
    * `ContributionForm` pré-rempli.
    */
   pendingContribution: {
+    kind?: 'anime' | 'manga';
     title: string;
     episode?: number;
+    chapter?: number;
     season?: number;
     sourceUrl?: string;
     requestedAt: number;
