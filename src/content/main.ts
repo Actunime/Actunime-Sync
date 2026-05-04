@@ -5,47 +5,55 @@ import {
   type DiscoveryResultPayload,
   type ExtensionMessage,
   type IframeRelayMessage,
+  type ResearchResultPayload,
   type TrackResultPayload,
-} from '@/shared/messaging';
-import type { DetectionResult } from './detection';
-import { applyLearnedPattern } from './learned-engine';
-import { detectGenericFromDom } from './heuristics';
-import { startImagePick } from './image-pick';
-import { launchConfigWizard } from './wizard';
-import { storage } from '@/shared/storage';
-import type { LearnedPattern } from '@/shared/types';
-import { createAudioObserver, type AudioObserver } from './progress/audio';
-import { observeVideoProgress } from './progress/video';
+} from "@/shared/messaging";
+import type { DetectionResult } from "./detection";
+import { applyLearnedPattern } from "./learned-engine";
+import { detectGenericFromDom, inferKind } from "./heuristics";
+import { startImagePick } from "./image-pick";
+import { launchConfigWizard } from "./wizard";
+import { storage } from "@/shared/storage";
+import type { LearnedPattern } from "@/shared/types";
+import { buildResumeUrl } from "@/shared/resume-url";
+import { createAudioObserver, type AudioObserver } from "./progress/audio";
+import { createScrollObserver, type ScrollObserver } from "./progress/scroll";
 import {
+  createPageCounterObserver,
+  type PageCounterObserver,
+} from "./progress/page-counter";
+import {
+  createNextButtonObserver,
+  type NextButtonObserver,
+} from "./progress/next-button";
+import {
+  removeConfigPrompt,
   removeWatchingBadge,
   showActionToast,
+  showConfigPrompt,
   showConfirmationCard,
   showToast,
   showWatchingBadge,
   suggestAlias,
-} from './overlay';
+  type ConfirmationChoice,
+} from "./overlay";
 
-const LOG = '[Actunime]';
+const LOG = "[Actunime]";
 
-let cleanupObserver: (() => void) | null = null;
 let currentDetection: DetectionResult | null = null;
-let currentVideo: HTMLVideoElement | null = null;
-/**
- * Délai de grâce avant de lancer la discovery — évite de spammer la card
- * de confirmation si l'user clique pour vérifier puis change d'avis.
- */
 const DISCOVERY_DELAY_MS = 5_000;
 let discoveryTimer: ReturnType<typeof setTimeout> | null = null;
 let discoveryFired = false;
-/**
- * LearnedPattern pour le host courant, chargé au boot. Utilisé en priorité
- * sur la Couche 1 si présent.
- */
 let learnedPattern: LearnedPattern | null = null;
-/** Observer audio fallback (utilisé quand pas de `<video>` direct accessible). */
 let audioObserver: AudioObserver | null = null;
-/** Vrai dès qu'un `<video>` direct s'attache → l'audio observer est désactivé. */
-let videoObserverAttached = false;
+let mangaObserver:
+  | ScrollObserver
+  | PageCounterObserver
+  | NextButtonObserver
+  | null = null;
+let configPromptDismissed = false;
+let mangaInitializedForUrl: string | null = null;
+let mangaInitializedChapter: number | undefined = undefined;
 
 function evaluateCurrentPage() {
   const host = location.hostname;
@@ -54,13 +62,42 @@ function evaluateCurrentPage() {
     applyLearned() ?? buildGenericDetection(host);
 
   if (!detection) {
-    cleanupObserver?.();
-    cleanupObserver = null;
+    audioObserver?.cleanup();
+    audioObserver = null;
+    mangaObserver?.cleanup();
+    mangaObserver = null;
     currentDetection = null;
-    currentVideo = null;
     removeWatchingBadge();
+    removeConfigPrompt();
     return;
   }
+
+  if (!learnedPattern) {
+    audioObserver?.cleanup();
+    audioObserver = null;
+    mangaObserver?.cleanup();
+    mangaObserver = null;
+    currentDetection = null;
+    removeWatchingBadge();
+    if (!configPromptDismissed) {
+      showConfigPrompt({
+        kind: detection.kind,
+        onConfigure: async () => {
+          const initialKind = detection.kind ?? inferKind();
+          const pattern = await launchConfigWizard({ kind: initialKind });
+          if (pattern) {
+            learnedPattern = pattern;
+            evaluateCurrentPage();
+          }
+        },
+        onDismiss: () => {
+          configPromptDismissed = true;
+        },
+      });
+    }
+    return;
+  }
+  removeConfigPrompt();
 
   // Si on a déjà une détection pour la même URL/épisode, on refresh juste les
   // champs (le DOM s'est peut-être enrichi entre temps, on améliore le titre).
@@ -77,68 +114,53 @@ function evaluateCurrentPage() {
   currentDetection = detection;
 
   if (!sameKey || prevTitle !== detection.title) {
-    console.info(LOG, 'Détection:', detection);
+    console.info(LOG, "Détection:", detection);
   }
 
-  if (sameKey && cleanupObserver) return; // observer déjà attaché pour cette page
+  if (sameKey && (audioObserver || mangaObserver)) return;
 
-  cleanupObserver?.();
   audioObserver?.cleanup();
   audioObserver = null;
-  videoObserverAttached = false;
+  mangaObserver?.cleanup();
+  mangaObserver = null;
 
-  // Stratégie hybride :
-  //  1. On tente toujours d'attacher l'observer `<video>` (timing 85 % précis)
-  //  2. En parallèle on prépare un observer audio (`tab.audible`) pour les
-  //     cas où le `<video>` n'est pas accessible (iframe cross-origin)
-  //  3. Le 1er qui fire « gagne » (dedup garantit que l'autre est ignoré)
-  cleanupObserver = observeVideoProgress({
-    selector: 'video',
-    threshold: 0.85,
-    dedupKey: `${detection.siteId}:${detection.slug ?? detection.seriesSlug ?? 'x'}:${detection.episode ?? 'x'}`,
-    onAttach: (video) => {
-      currentVideo = video;
-      videoObserverAttached = true;
-      // Si l'audio observer s'était déjà créé, on l'arrête (video plus précis)
-      audioObserver?.cleanup();
-      audioObserver = null;
-      console.info(LOG, 'Vidéo attachée, tracking actif (mode video).');
-    },
-    onPlayStart: () => {
-      scheduleDiscovery();
-    },
-    onThresholdReached: (ratio) => {
-      if (currentDetection) handleProgressPush(currentDetection, ratio);
-    },
-  });
+  if (detection.kind === "manga") {
+    if (
+      mangaInitializedForUrl === location.href &&
+      mangaInitializedChapter === detection.chapter
+    ) {
+      return;
+    }
+    discoveryFired = false;
+    removeWatchingBadge();
+    mangaInitializedForUrl = location.href;
+    mangaInitializedChapter = detection.chapter;
+    void scheduleDiscovery(0);
+    attachMangaObserver(detection);
+    reportTrackingState();
+    return;
+  }
 
-  // Fallback audio : créé tout de suite, prendra le relais si jamais le
-  // `<video>` ne s'attache pas (cas iframe cross-origin pour les agrégateurs).
-  // Plus de push automatique à un threshold fixe (faux positifs sur format
-  // court/long). À la place :
-  //  - mode B : push au changement d'épisode si engagement ≥ 10 min (cf. observeNavigation)
-  //  - mode A : bouton « Marquer cet épisode vu » dans le popup une fois engagement atteint
   audioObserver = createAudioObserver({
     onPlayStart: () => {
-      if (videoObserverAttached) return; // video pris la main
-      console.info(LOG, 'Audio stable détecté, tracking actif (mode audio).');
-      // Pas de délai : l'audioObserver a déjà attendu 5s de stabilité.
+      console.info(LOG, "Audio stable détecté, tracking actif (mode audio).");
       scheduleDiscovery(0);
       reportTrackingState();
     },
     onEngagementReached: (cumMs) => {
-      if (videoObserverAttached) return;
-      console.info(LOG, `Engagement audio atteint (${Math.round(cumMs / 60_000)} min).`);
+      console.info(
+        LOG,
+        `Engagement audio atteint (${Math.round(cumMs / 60_000)} min).`,
+      );
       reportTrackingState();
     },
   });
 
-  // Query l'état audible initial : `chrome.tabs.onUpdated` ne fire que sur
-  // changement, donc si la page jouait déjà avant l'injection (ex. au F5),
-  // l'observer attendrait un signal qui ne viendrait jamais.
   void (async () => {
     try {
-      const res = (await sendMessage({ type: 'QUERY_TAB_AUDIBLE' })) as { audible: boolean };
+      const res = (await sendMessage({ type: "QUERY_TAB_AUDIBLE" })) as {
+        audible: boolean;
+      };
       if (res?.audible) audioObserver?.update(true);
     } catch {
       // ignore
@@ -190,26 +212,62 @@ function applyLearned(): DetectionResult | null {
   return applyLearnedPattern(learnedPattern);
 }
 
+function attachMangaObserver(detection: DetectionResult) {
+  const config = learnedPattern?.mangaTracking;
+  if (!config || config.mode === "manual") return;
+
+  const trigger = () => {
+    if (!currentDetection) return;
+    console.info(LOG, `[manga] trigger via ${config.mode}, push chapitre`);
+    void handleProgressPush(currentDetection, 1);
+  };
+
+  if (config.mode === "scroll") {
+    mangaObserver = createScrollObserver({
+      threshold: config.threshold ?? 0.9,
+      containerSelector: config.selector,
+      onReached: trigger,
+    });
+    return;
+  }
+  if (config.mode === "page-counter" && config.selector) {
+    mangaObserver = createPageCounterObserver({
+      selector: config.selector,
+      onReached: trigger,
+    });
+    return;
+  }
+  if (config.mode === "next-button" && config.selector) {
+    mangaObserver = createNextButtonObserver({
+      selector: config.selector,
+      onClicked: trigger,
+    });
+    return;
+  }
+  void detection;
+}
+
 function buildGenericDetection(host: string): DetectionResult | null {
   const generic = detectGenericFromDom();
   if (!generic) return null;
 
   // Slug séries généré depuis le titre (kebab-case, ASCII) — sert de fallback
   // pour `seriesKey` quand on n'a pas d'ID interne stable.
-  const seriesSlug = (generic.seriesTitle ?? generic.title ?? '')
+  const seriesSlug = (generic.seriesTitle ?? generic.title ?? "")
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
     .slice(0, 80);
 
   return {
     siteId: `generic:${host}`,
     kind: generic.kind,
     url: location.href,
-    title: generic.seriesTitle ?? generic.title ?? '',
+    title: generic.seriesTitle ?? generic.title ?? "",
     episode: generic.episode,
+    chapter: generic.chapter,
     season: generic.season,
     seriesSlug: seriesSlug || undefined,
     slug: seriesSlug || undefined,
@@ -236,11 +294,18 @@ function scheduleEvaluation() {
  */
 function observeDomReady() {
   const observer = new MutationObserver(scheduleEvaluation);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-  const titleEl = document.querySelector('title');
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+  const titleEl = document.querySelector("title");
   if (titleEl) {
     const titleObserver = new MutationObserver(scheduleEvaluation);
-    titleObserver.observe(titleEl, { childList: true, characterData: true, subtree: true });
+    titleObserver.observe(titleEl, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
   }
 }
 
@@ -250,18 +315,20 @@ function observeDomReady() {
  */
 chrome.runtime.onMessage.addListener(
   (message: ExtensionMessage, _sender, sendResponse) => {
-    if (message.type === 'START_IMAGE_PICK') {
+    if (message.type === "START_IMAGE_PICK") {
       if (window.top !== window.self) return false;
       startImagePick();
       sendResponse({ ok: true });
       return false;
     }
-    if (message.type === 'LAUNCH_CONFIG_WIZARD') {
+    if (message.type === "LAUNCH_CONFIG_WIZARD") {
       // Le top frame uniquement répond — sinon le wizard se lance dans chaque iframe.
       if (window.top !== window.self) return false;
       void (async () => {
         try {
-          const pattern = await launchConfigWizard({ kind: 'anime' });
+          const initialKind =
+            learnedPattern?.kind ?? currentDetection?.kind ?? inferKind();
+          const pattern = await launchConfigWizard({ kind: initialKind });
           if (pattern) {
             learnedPattern = pattern;
             // Re-évalue la page avec le nouveau pattern actif
@@ -271,12 +338,15 @@ chrome.runtime.onMessage.addListener(
             sendResponse({ ok: false, cancelled: true });
           }
         } catch (err) {
-          sendResponse({ ok: false, error: (err as Error)?.message ?? 'erreur wizard' });
+          sendResponse({
+            ok: false,
+            error: (err as Error)?.message ?? "erreur wizard",
+          });
         }
       })();
       return true;
     }
-    if (message.type === 'GET_DETECTION') {
+    if (message.type === "GET_DETECTION") {
       const response: DetectionStatusPayload = currentDetection
         ? {
             detected: true,
@@ -284,15 +354,12 @@ chrome.runtime.onMessage.addListener(
             kind: currentDetection.kind,
             title: currentDetection.title,
             episode: currentDetection.episode,
+            chapter: currentDetection.chapter,
             season: currentDetection.season,
             slug: currentDetection.slug,
             seriesId: currentDetection.seriesId,
             seriesSlug: currentDetection.seriesSlug,
             url: currentDetection.url,
-            progressRatio:
-              currentVideo && currentVideo.duration
-                ? currentVideo.currentTime / currentVideo.duration
-                : undefined,
           }
         : { detected: false };
       sendResponse(response);
@@ -308,6 +375,7 @@ function buildPayload(detection: DetectionResult, ratio: number) {
     url: detection.url,
     title: detection.title,
     episode: detection.episode,
+    chapter: detection.chapter,
     season: detection.season,
     slug: detection.slug,
     seriesId: detection.seriesId,
@@ -326,9 +394,126 @@ function buildPayload(detection: DetectionResult, ratio: number) {
  * confirmation avec la détection courante.
  */
 async function handleEditMatch(seriesKey: string, detection: DetectionResult) {
-  await sendMessage({ type: 'FORGET_MATCH', payload: { seriesKey } });
+  await sendMessage({ type: "FORGET_MATCH", payload: { seriesKey } });
   removeWatchingBadge();
-  await handleDiscovery(detection);
+  discoveryFired = false;
+  mangaInitializedForUrl = null;
+  mangaInitializedChapter = undefined;
+
+  const research = (await sendMessage({
+    type: "RESEARCH_QUERY",
+    payload: { query: detection.title, kind: detection.kind },
+  })) as ResearchResultPayload;
+
+  console.log(LOG, "handleEditMatch RESEARCH_QUERY", research);
+
+  const choice = await showConfirmationCard({
+    detectedTitle: detection.title,
+    episode: detection.episode || detection.chapter,
+    season: detection.season,
+    kind: detection.kind,
+    sourceUrl: detection.url,
+    candidates: research.candidates ?? [],
+  });
+
+  await handleConfirmationChoice(choice, seriesKey, detection);
+}
+
+async function handleConfirmationChoice(
+  choice: ConfirmationChoice,
+  seriesKey: string,
+  detection: DetectionResult,
+) {
+  if (choice.action === "configure_site") {
+    await handleReconfigure(detection);
+    return;
+  }
+  if (choice.action === "open_contribution") return;
+
+  const confirmRes = (await sendMessage({
+    type: "CONFIRM_TRACK",
+    payload:
+      choice.action === "confirm"
+        ? {
+            action: "confirm",
+            seriesKey,
+            chosenMediaId: choice.chosenMediaId,
+            chosenTitle: choice.chosenTitle,
+            chosenCoverUrl: choice.chosenCoverUrl,
+            isRewatch: choice.isRewatch,
+            proposalId: choice.proposalId,
+            kind: detection.kind,
+          }
+        : choice.action === "ignore_series"
+          ? { action: "ignore_series", seriesKey }
+          : { action: "skip" },
+  })) as ConfirmResultPayload;
+
+  if (confirmRes.state === "cached") {
+    const isManga = detection.kind === "manga";
+    showWatchingBadge({
+      kind: detection.kind,
+      matchedTitle: confirmRes.matchedTitle,
+      coverUrl: confirmRes.coverUrl,
+      episode: detection.episode,
+      chapter: detection.chapter,
+      season: detection.season,
+      mode: isManga ? "manual" : "audio",
+      listProgress: confirmRes.existingListEntry,
+      onEdit: () => handleEditMatch(confirmRes.seriesKey, detection),
+      onMarkNow: () => handleMarkNowFromBadge(detection),
+      onIgnore: () => handleIgnoreFromBadge(confirmRes.seriesKey),
+      onReconfigure: () => handleReconfigure(detection),
+      resume: computeResume(detection, confirmRes.existingListEntry),
+    });
+  } else if (confirmRes.state === "ignored") {
+    showToast(
+      "Série ignorée. Tu peux la réactiver depuis les options.",
+      "info",
+    );
+  } else if (confirmRes.state === "error") {
+    showToast(`Impossible : ${confirmRes.error}`, "error");
+  }
+}
+
+function computeResume(
+  detection: DetectionResult,
+  listProgress:
+    | {
+        episodesWatched?: number;
+        chaptersRead?: number;
+      }
+    | null
+    | undefined,
+): { targetNumber: number; onResume: () => void } | undefined {
+  const isManga = detection.kind === "manga";
+  const currentNumber = isManga ? detection.chapter : detection.episode;
+  const consumed = isManga ? listProgress?.chaptersRead : listProgress?.episodesWatched;
+  if (currentNumber === undefined || consumed === undefined || consumed <= currentNumber) {
+    return undefined;
+  }
+  const targetNumber = consumed + 1;
+  const url = buildResumeUrl(window.location.href, currentNumber, targetNumber);
+  if (!url) return undefined;
+  return {
+    targetNumber,
+    onResume: () => {
+      window.location.href = url;
+    },
+  };
+}
+
+async function handleReconfigure(detection: DetectionResult) {
+  removeWatchingBadge();
+  const initialKind = learnedPattern?.kind ?? detection.kind ?? inferKind();
+  const pattern = await launchConfigWizard({ kind: initialKind });
+  if (pattern) {
+    learnedPattern = pattern;
+    mangaInitializedForUrl = null;
+    mangaInitializedChapter = undefined;
+    discoveryFired = false;
+    evaluateCurrentPage();
+  }
 }
 
 /**
@@ -345,69 +530,84 @@ async function handleMarkNowFromBadge(detection: DetectionResult) {
  * nouveau toast / badge tant que l'user n'a pas modifié manuellement.
  */
 async function handleIgnoreFromBadge(seriesKey: string) {
-  await sendMessage({ type: 'FORGET_MATCH', payload: { seriesKey } });
+  await sendMessage({ type: "FORGET_MATCH", payload: { seriesKey } });
   // ignore_series via le tracker (stockage permanent)
   await sendMessage({
-    type: 'CONFIRM_TRACK',
-    payload: { action: 'ignore_series', seriesKey },
+    type: "CONFIRM_TRACK",
+    payload: { action: "ignore_series", seriesKey },
   });
   removeWatchingBadge();
-  showToast('Série ignorée. Vous pouvez la réactiver depuis les options.', 'info', 4000);
+  showToast(
+    "Série ignorée. Vous pouvez la réactiver depuis les options.",
+    "info",
+    4000,
+  );
 }
 
 async function handleDiscovery(detection: DetectionResult) {
-  console.info(LOG, 'Lecture détectée, discovery série...');
+  console.info(LOG, "Lecture détectée, discovery série...", detection);
   try {
     const response = (await sendMessage({
-      type: 'DISCOVER_SERIES',
+      type: "DISCOVER_SERIES",
       payload: buildPayload(detection, 0),
     })) as DiscoveryResultPayload;
 
-    console.info(LOG, 'Réponse discovery:', response);
+    console.info(LOG, "Réponse discovery:", response);
 
-    if (response.state === 'cached') {
+    if (response.state === "cached") {
       console.info(LOG, `Série en cache : ${response.matchedTitle}`);
+      const isManga = detection.kind === "manga";
       showWatchingBadge({
+        kind: detection.kind,
         matchedTitle: response.matchedTitle,
         coverUrl: response.coverUrl,
         episode: detection.episode,
+        chapter: detection.chapter,
         season: detection.season,
-        mode: videoObserverAttached ? 'video' : 'audio',
+        mode: isManga ? "manual" : "audio",
         listProgress: response.existingListEntry,
         onEdit: () => handleEditMatch(response.seriesKey, detection),
         onMarkNow: () => handleMarkNowFromBadge(detection),
         onIgnore: () => handleIgnoreFromBadge(response.seriesKey),
+        onReconfigure: () => handleReconfigure(detection),
+        resume: computeResume(detection, response.existingListEntry),
       });
       return;
     }
-    if (response.state === 'ignored') {
-      console.info(LOG, 'Série ignorée par l\'user, pas de tracking.');
+    if (response.state === "ignored") {
+      console.info(LOG, "Série ignorée par l'user, pas de tracking.");
       return;
     }
-    if (response.state === 'no_match') {
-      showToast(`Pas trouvé sur Actunime : ${response.error ?? detection.title}`, 'error');
+    if (response.state === "no_match") {
+      showToast(
+        `Pas trouvé sur Actunime : ${response.error ?? detection.title}`,
+        "error",
+      );
       return;
     }
-    if (response.state === 'error') {
-      showToast(`Erreur discovery : ${response.error}`, 'error');
+    if (response.state === "error") {
+      showToast(`Erreur discovery : ${response.error}`, "error");
       return;
     }
 
+    console.log(LOG, "choice...");
     // needs_confirmation (avec ou sans candidats — la card propose le CTA
     // contribution dans le cas vide).
     const choice = await showConfirmationCard({
       detectedTitle: response.detection.title,
-      episode: response.detection.episode,
+      episode: response.detection.episode || response.detection.chapter,
       season: response.detection.season,
       kind: detection.kind,
       sourceUrl: detection.url,
       candidates: response.candidates,
     });
 
+    console.log(LOG, "choice:", choice);
+
     // L'user dit « le titre détecté est faux, configure le site ». On lance
     // le wizard ; après save, on relance une discovery avec la nouvelle
     // détection issue du LearnedPattern.
-    if (choice.action === 'configure_site') {
+    if (choice.action === "configure_site") {
       const pattern = await launchConfigWizard({ kind: detection.kind });
       if (!pattern) return; // user a annulé
       // `learnedPattern` sera mis à jour via le storage onChanged listener.
@@ -422,54 +622,72 @@ async function handleDiscovery(detection: DetectionResult) {
     // Le CTA contribution stocke un flag `pendingContribution` puis attend
     // que l'user ouvre le popup pour finaliser. La card overlay affiche déjà
     // son propre toast d'instruction — on n'en superpose pas un autre ici.
-    if (choice.action === 'open_contribution') {
+    if (choice.action === "open_contribution") {
       return;
     }
 
     const confirmRes = (await sendMessage({
-      type: 'CONFIRM_TRACK',
+      type: "CONFIRM_TRACK",
       payload:
-        choice.action === 'confirm'
+        choice.action === "confirm"
           ? {
-              action: 'confirm',
+              action: "confirm",
               seriesKey: response.seriesKey,
-              chosenAnimeId: choice.chosenAnimeId,
+              chosenMediaId: choice.chosenMediaId,
               chosenTitle: choice.chosenTitle,
               chosenCoverUrl: choice.chosenCoverUrl,
               isRewatch: choice.isRewatch,
+              proposalId: choice.proposalId,
+              kind: detection.kind,
             }
-          : choice.action === 'ignore_series'
-            ? { action: 'ignore_series', seriesKey: response.seriesKey }
-            : { action: 'skip' },
+          : choice.action === "ignore_series"
+            ? { action: "ignore_series", seriesKey: response.seriesKey }
+            : { action: "skip" },
     })) as ConfirmResultPayload;
 
-    if (confirmRes.state === 'cached') {
+    if (confirmRes.state === "cached") {
+      const isManga = detection.kind === "manga";
       showWatchingBadge({
+        kind: detection.kind,
         matchedTitle: confirmRes.matchedTitle,
         coverUrl: confirmRes.coverUrl,
         episode: detection.episode,
+        chapter: detection.chapter,
         season: detection.season,
-        mode: videoObserverAttached ? 'video' : 'audio',
+        mode: isManga ? "manual" : "audio",
+        listProgress: confirmRes.existingListEntry,
         onEdit: () => handleEditMatch(confirmRes.seriesKey, detection),
         onMarkNow: () => handleMarkNowFromBadge(detection),
         onIgnore: () => handleIgnoreFromBadge(confirmRes.seriesKey),
+        onReconfigure: () => handleReconfigure(detection),
+        resume: computeResume(detection, confirmRes.existingListEntry),
       });
       // Suggestion d'alias post-confirmation (best-effort, stub backend pour V0.2).
-      if (choice.action === 'confirm' && choice.suggestAliasFor) {
-        const res = await suggestAlias(choice.chosenAnimeId, choice.suggestAliasFor);
+      if (choice.action === "confirm" && choice.suggestAliasFor) {
+        const res = await suggestAlias(
+          choice.chosenMediaId,
+          choice.suggestAliasFor,
+        );
         if (res.ok) {
-          showToast('Synonyme proposé à la modération. Merci !', 'success', 4000);
+          showToast(
+            "Synonyme proposé à la modération. Merci !",
+            "success",
+            4000,
+          );
         } else if (res.error) {
-          console.info(LOG, 'Suggestion alias non envoyée:', res.error);
+          console.info(LOG, "Suggestion alias non envoyée:", res.error);
         }
       }
-    } else if (confirmRes.state === 'ignored') {
-      showToast('Série ignorée. Tu peux la réactiver depuis les options.', 'info');
-    } else if (confirmRes.state === 'error') {
-      showToast(`Impossible : ${confirmRes.error}`, 'error');
+    } else if (confirmRes.state === "ignored") {
+      showToast(
+        "Série ignorée. Tu peux la réactiver depuis les options.",
+        "info",
+      );
+    } else if (confirmRes.state === "error") {
+      showToast(`Impossible : ${confirmRes.error}`, "error");
     }
   } catch (err) {
-    console.warn(LOG, 'Erreur discovery:', err);
+    console.warn(LOG, "Erreur discovery:", err);
   }
 }
 
@@ -485,20 +703,27 @@ async function notifyPushedWithUndo(
   detection: DetectionResult,
   response: Extract<TrackResultPayload, { success: true }>,
 ) {
-  const epLabel = response.episodesWatched ?? detection.episode ?? '?';
+  const isManga = detection.kind === "manga";
+  const numberLabel = isManga ? "Chapitre" : "Épisode";
+  const verb = isManga ? "lu" : "vu";
+  const num = isManga
+    ? (response.chaptersRead ?? detection.chapter)
+    : (response.episodesWatched ?? detection.episode);
+  const numStr = num ?? "?";
   const title = response.matchedTitle ?? detection.title;
-  const message = `Épisode ${epLabel} marqué vu — ${title}${response.isRewatch ? ' (↻ rewatch)' : ''}`;
+  const rewatchSuffix = !isManga && response.isRewatch ? " (↻ rewatch)" : "";
+  const message = `${numberLabel} ${numStr} marqué ${verb} — ${title}${rewatchSuffix}`;
 
   // Pas d'undo dispo (snapshot manquant) → toast simple sans bouton.
   if (!response.undo) {
-    showToast(message, 'success');
+    showToast(message, "success");
     return;
   }
 
   const clicked = await showActionToast({
     message,
-    actionLabel: 'Annuler',
-    kind: 'success',
+    actionLabel: "Annuler",
+    kind: "success",
     durationMs: 8_000,
   });
 
@@ -506,14 +731,23 @@ async function notifyPushedWithUndo(
 
   // L'user a cliqué Annuler.
   const undoRes = (await sendMessage({
-    type: 'UNDO_LAST_PUSH',
+    type: "UNDO_LAST_PUSH",
     payload: response.undo,
   })) as { ok: boolean; error?: string };
 
   if (undoRes.ok) {
-    showToast('Annulé. L\'épisode a été remis dans son état précédent.', 'info', 4000);
+    const undoneLabel = isManga ? "Le chapitre" : "L'épisode";
+    showToast(
+      `Annulé. ${undoneLabel} a été remis dans son état précédent.`,
+      "info",
+      4000,
+    );
   } else {
-    showToast(`Impossible d'annuler : ${undoRes.error ?? 'erreur inconnue'}`, 'error', 5000);
+    showToast(
+      `Impossible d'annuler : ${undoRes.error ?? "erreur inconnue"}`,
+      "error",
+      5000,
+    );
   }
 }
 
@@ -521,7 +755,7 @@ async function handleProgressPush(detection: DetectionResult, ratio: number) {
   console.info(LOG, `Seuil atteint (${Math.round(ratio * 100)}%), push...`);
   try {
     const response = (await sendMessage({
-      type: 'PROGRESS_UPDATE',
+      type: "PROGRESS_UPDATE",
       payload: buildPayload(detection, ratio),
     })) as TrackResultPayload;
 
@@ -529,16 +763,16 @@ async function handleProgressPush(detection: DetectionResult, ratio: number) {
       void notifyPushedWithUndo(detection, response);
       return;
     }
-    if ('ignored' in response && response.ignored) return;
-    if ('error' in response && response.error === 'not_confirmed') {
-      console.info(LOG, 'Série non confirmée, push ignoré.');
+    if ("ignored" in response && response.ignored) return;
+    if ("error" in response && response.error === "not_confirmed") {
+      console.info(LOG, "Série non confirmée, push ignoré.");
       return;
     }
-    if ('error' in response && response.error) {
-      showToast(`Impossible : ${response.error}`, 'error');
+    if ("error" in response && response.error) {
+      showToast(`Impossible : ${response.error}`, "error");
     }
   } catch (err) {
-    console.warn(LOG, 'Erreur push:', err);
+    console.warn(LOG, "Erreur push:", err);
   }
 }
 
@@ -547,31 +781,27 @@ function observeNavigation() {
   const check = () => {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
-      // Mode B : si engagement ≥ 10 min sur l'ancien épisode + on n'était pas
-      // en mode video direct (où le push à 85 % se gère seul) → on push
-      // l'ancien épisode avant de cleanup.
-      if (
-        currentDetection &&
-        !videoObserverAttached &&
-        audioObserver?.hasReachedEngagement()
-      ) {
-        console.info(LOG, '[mode B] push épisode précédent au changement de page');
+      if (currentDetection && audioObserver?.hasReachedEngagement()) {
+        console.info(LOG, "Push épisode précédent au changement de page");
         void handleProgressPush(currentDetection, 1);
       }
 
-      // Reset complet à chaque navigation SPA.
-      cleanupObserver?.();
-      cleanupObserver = null;
       audioObserver?.cleanup();
       audioObserver = null;
+      mangaObserver?.cleanup();
+      mangaObserver = null;
       cancelDiscovery();
       discoveryFired = false;
       currentDetection = null;
-      currentVideo = null;
-      videoObserverAttached = false;
+      configPromptDismissed = false;
+      mangaInitializedForUrl = null;
+      mangaInitializedChapter = undefined;
       removeWatchingBadge();
+      removeConfigPrompt();
       reportTrackingState();
       setTimeout(evaluateCurrentPage, 500);
+      setTimeout(evaluateCurrentPage, 1500);
+      setTimeout(evaluateCurrentPage, 3500);
     }
   };
   const origPush = history.pushState;
@@ -584,75 +814,24 @@ function observeNavigation() {
     origReplace.apply(this, args);
     setTimeout(check, 60);
   };
-  window.addEventListener('popstate', check);
+  window.addEventListener("popstate", check);
   // Filet de sécurité : poll léger car certains sites manipulent l'URL en JS sans pushState.
   setInterval(check, 2000);
 }
 
-// ─────────────────────────── Mode iframe ────────────────────────────────────
-
-/**
- * Quand le content script tourne dans une iframe (player tiers cross-origin
- * activé via wizard), on n'a pas accès à la page parente — on ne peut donc
- * pas faire de discovery soi-même. Mode minimal :
- *  - On observe le `<video>` direct (présent dans cette iframe)
- *  - On envoie les events au SW qui les relai au top frame
- *  - Le top frame déclenche sa logique de discovery normale
- */
-function initIframeMode() {
-  console.info(LOG, 'Iframe mode loaded on', location.hostname);
-  let cleanup: (() => void) | null = null;
-
-  const ensureObserver = () => {
-    if (cleanup) return;
-    cleanup = observeVideoProgress({
-      selector: 'video',
-      threshold: 0.85,
-      dedupKey: `iframe:${location.href}`,
-      onAttach: () => {
-        console.info(LOG, '[iframe] vidéo attachée');
-      },
-      onPlayStart: () => {
-        void sendMessage({
-          type: 'FRAME_PLAY_START',
-          payload: { frameUrl: location.href },
-        }).catch(() => {});
-      },
-      onThresholdReached: (ratio) => {
-        void sendMessage({
-          type: 'FRAME_THRESHOLD_REACHED',
-          payload: { frameUrl: location.href, ratio },
-        }).catch(() => {});
-      },
-    });
-  };
-
-  ensureObserver();
-  // Re-scan en cas de DOM tardif (player monté async)
-  const obs = new MutationObserver(ensureObserver);
-  obs.observe(document.documentElement, { childList: true, subtree: true });
-}
-
-// ─────────────────────── Top frame init (existant) ──────────────────────────
-
 function initTopFrameMode() {
-  console.info(LOG, 'Content script loaded on', location.hostname);
-  // Charge le LearnedPattern AVANT la 1re évaluation (évite un faux pass à
-  // la Couche 1 sur les pages où l'user a déjà configuré un pattern).
+  console.info(LOG, "Content script loaded on", location.hostname);
   void (async () => {
     learnedPattern = await loadLearnedPattern(location.hostname);
-    if (learnedPattern) console.info(LOG, 'LearnedPattern actif pour', location.hostname);
+    if (learnedPattern)
+      console.info(LOG, "LearnedPattern actif pour", location.hostname);
     evaluateCurrentPage();
-    // Si l'user vient d'activer ce site depuis le popup, on lance directement
-    // le wizard au boot — flow « Ajouter ce site » = activation + configuration.
     await maybeAutoLaunchWizard();
   })();
   observeDomReady();
   observeNavigation();
-  listenToIframeRelay();
+  listenToTabAudibleRelay();
   observeLearnedPatternChanges();
-  // Heartbeat tracking state : update toutes les 30 sec côté SW (utilisé par
-  // le popup pour décider d'afficher le bouton « Marquer cet épisode vu »).
   setInterval(reportTrackingState, 30_000);
 }
 
@@ -665,20 +844,26 @@ async function maybeAutoLaunchWizard() {
   try {
     const should = await storage.consumePendingWizardForHost(location.hostname);
     if (!should) return;
-    console.info(LOG, 'Auto-lancement du wizard suite à activation user');
-    const pattern = await launchConfigWizard({ kind: 'anime' });
+    console.info(LOG, "Auto-lancement du wizard suite à activation user");
+    const initialKind =
+      learnedPattern?.kind ?? currentDetection?.kind ?? inferKind();
+    const pattern = await launchConfigWizard({ kind: initialKind });
     if (pattern) {
       learnedPattern = pattern;
       evaluateCurrentPage();
     }
   } catch (err) {
-    console.warn(LOG, 'maybeAutoLaunchWizard erreur:', err);
+    console.warn(LOG, "maybeAutoLaunchWizard erreur:", err);
   }
 }
 
-async function loadLearnedPattern(host: string): Promise<LearnedPattern | null> {
+async function loadLearnedPattern(
+  host: string,
+): Promise<LearnedPattern | null> {
   try {
-    const { learnedPatterns = {} } = (await chrome.storage.local.get('learnedPatterns')) as {
+    const { learnedPatterns = {} } = (await chrome.storage.local.get(
+      "learnedPatterns",
+    )) as {
       learnedPatterns?: Record<string, LearnedPattern>;
     };
     return learnedPatterns[host] ?? null;
@@ -693,10 +878,16 @@ async function loadLearnedPattern(host: string): Promise<LearnedPattern | null> 
  */
 function observeLearnedPatternChanges() {
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'local') return;
-    if (!('learnedPatterns' in changes)) return;
-    const next = (changes.learnedPatterns.newValue ?? {}) as Record<string, LearnedPattern>;
+    if (area !== "local") return;
+    if (!("learnedPatterns" in changes)) return;
+    const next = (changes.learnedPatterns.newValue ?? {}) as Record<
+      string,
+      LearnedPattern
+    >;
     learnedPattern = next[location.hostname] ?? null;
+    mangaInitializedForUrl = null;
+    mangaInitializedChapter = undefined;
+    discoveryFired = false;
     evaluateCurrentPage();
   });
 }
@@ -706,46 +897,30 @@ function observeLearnedPatternChanges() {
  * décider d'afficher un bouton « Marquer cet épisode comme vu ».
  */
 function reportTrackingState() {
+  const isManga = currentDetection?.kind === "manga";
   void sendMessage({
-    type: 'REPORT_TRACKING_STATE',
+    type: "REPORT_TRACKING_STATE",
     payload: {
-      mode: videoObserverAttached ? 'video' : audioObserver ? 'audio' : null,
+      mode: isManga ? "manual" : audioObserver ? "audio" : null,
       engagementReached: audioObserver?.hasReachedEngagement() ?? false,
       cumulativeMs: audioObserver?.getCumulativeMs() ?? 0,
-      // Confirmé = on a une détection courante (donc cache/discovery a tourné)
       confirmed: !!currentDetection,
       title: currentDetection?.title,
     },
   }).catch(() => {});
 }
 
-/**
- * Top frame écoute les relais d'events vidéo venant des sub-frames (players
- * cross-origin activés). Déclenche discovery / push avec sa propre détection
- * (le sub-frame n'en a pas — pas de meta og/ld+json sur un player nu).
- */
-function listenToIframeRelay() {
+function listenToTabAudibleRelay() {
   chrome.runtime.onMessage.addListener(
     (raw: ExtensionMessage | IframeRelayMessage, _sender, sendResponse) => {
       const message = raw as IframeRelayMessage | ExtensionMessage;
-      if (message.type === 'IFRAME_PLAY_START' && currentDetection) {
-        console.info(LOG, '[top] iframe play relai');
-        void handleDiscovery(currentDetection);
-        return false;
-      }
-      if (message.type === 'IFRAME_THRESHOLD_REACHED' && currentDetection) {
-        console.info(LOG, '[top] iframe threshold relai');
-        void handleProgressPush(currentDetection, message.payload.ratio);
-        return false;
-      }
-      if (message.type === 'TAB_AUDIBLE_CHANGED') {
+      if (message.type === "TAB_AUDIBLE_CHANGED") {
         audioObserver?.update(message.payload.audible);
         return false;
       }
-      // Mode A : bouton « Marquer cet épisode vu » du popup.
-      if (message.type === 'MARK_AS_WATCHED_NOW') {
+      if (message.type === "MARK_AS_WATCHED_NOW") {
         if (!currentDetection) {
-          sendResponse({ ok: false, error: 'Aucune détection active' });
+          sendResponse({ ok: false, error: "Aucune détection active" });
           return false;
         }
         void (async () => {
@@ -753,7 +928,10 @@ function listenToIframeRelay() {
             await handleProgressPush(currentDetection!, 1);
             sendResponse({ ok: true });
           } catch (err) {
-            sendResponse({ ok: false, error: (err as Error)?.message ?? 'erreur inconnue' });
+            sendResponse({
+              ok: false,
+              error: (err as Error)?.message ?? "erreur inconnue",
+            });
           }
         })();
         return true;
@@ -763,10 +941,6 @@ function listenToIframeRelay() {
   );
 }
 
-// ──────────────────────────────── Boot ──────────────────────────────────────
-
 if (window.top === window.self) {
   initTopFrameMode();
-} else {
-  initIframeMode();
 }

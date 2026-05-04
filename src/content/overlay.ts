@@ -9,32 +9,33 @@
 
 import {
   sendMessage,
-  type CandidateAnime,
+  type CandidateMedia,
   type FetchImageResultPayload,
   type ResearchResultPayload,
   type SuggestAliasResultPayload,
-} from '@/shared/messaging';
+} from "@/shared/messaging";
 
-const TOAST_ID = 'actunime-tracker-overlay';
-const BADGE_ID = 'actunime-tracker-badge';
+const TOAST_ID = "actunime-tracker-overlay";
+const BADGE_ID = "actunime-tracker-badge";
+const CONFIG_PROMPT_ID = "actunime-tracker-config-prompt";
 const FONT_STACK =
   "'Outfit Variable', 'Outfit', system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
 
-type ToastKind = 'success' | 'error' | 'info';
+type ToastKind = "success" | "error" | "info";
 const TOAST_BORDERS: Record<ToastKind, string> = {
-  success: '#34d399',
-  info: 'oklch(66.906% 0.18376 248.826)',
-  error: '#f87171',
+  success: "#34d399",
+  info: "oklch(66.906% 0.18376 248.826)",
+  error: "#f87171",
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  WATCHING: 'En cours',
-  READING: 'En cours',
-  COMPLETED: 'Terminé',
-  ON_HOLD: 'En pause',
-  DROPPED: 'Abandonné',
-  PLAN_TO_WATCH: 'Planifié',
-  PLAN_TO_READ: 'Planifié',
+  WATCHING: "En cours",
+  READING: "En cours",
+  COMPLETED: "Terminé",
+  ON_HOLD: "En pause",
+  DROPPED: "Abandonné",
+  PLAN_TO_WATCH: "Planifié",
+  PLAN_TO_READ: "Planifié",
 };
 
 function removeExisting() {
@@ -43,12 +44,12 @@ function removeExisting() {
 }
 
 function escapeHtml(s: unknown): string {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function cssEscape(s: string): string {
@@ -69,15 +70,15 @@ export function showActionToast(opts: {
   durationMs?: number;
 }): Promise<boolean> {
   removeExisting();
-  const kind = opts.kind ?? 'success';
+  const kind = opts.kind ?? "success";
   const border = TOAST_BORDERS[kind];
   const duration = opts.durationMs ?? 8_000;
 
   return new Promise<boolean>((resolve) => {
-    const host = document.createElement('div');
+    const host = document.createElement("div");
     host.id = TOAST_ID;
     host.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:2147483647;font-family:${FONT_STACK};`;
-    const shadow = host.attachShadow({ mode: 'closed' });
+    const shadow = host.attachShadow({ mode: "closed" });
 
     let resolved = false;
     const finish = (clicked: boolean) => {
@@ -124,11 +125,11 @@ export function showActionToast(opts: {
 
     document.documentElement.appendChild(host);
 
-    const btn = shadow.querySelector<HTMLButtonElement>('#actunime-action');
-    btn?.addEventListener('click', () => {
+    const btn = shadow.querySelector<HTMLButtonElement>("#actunime-action");
+    btn?.addEventListener("click", () => {
       if (btn) {
         btn.disabled = true;
-        btn.textContent = '…';
+        btn.textContent = "…";
       }
       finish(true);
     });
@@ -137,13 +138,17 @@ export function showActionToast(opts: {
   });
 }
 
-export function showToast(message: string, kind: ToastKind = 'success', durationMs = 4000) {
+export function showToast(
+  message: string,
+  kind: ToastKind = "success",
+  durationMs = 4000,
+) {
   removeExisting();
   const border = TOAST_BORDERS[kind];
-  const host = document.createElement('div');
+  const host = document.createElement("div");
   host.id = TOAST_ID;
   host.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:2147483647;font-family:${FONT_STACK};`;
-  const shadow = host.attachShadow({ mode: 'closed' });
+  const shadow = host.attachShadow({ mode: "closed" });
   shadow.innerHTML = `
     <style>
       .toast {
@@ -169,32 +174,35 @@ export function showToast(message: string, kind: ToastKind = 'success', duration
 
 export type ConfirmationChoice =
   | {
-      action: 'confirm';
-      chosenAnimeId: string;
+      action: "confirm";
+      chosenMediaId: string;
       chosenTitle: string;
       chosenCoverUrl?: string | null;
       isRewatch: boolean;
       suggestAliasFor?: string;
+      /** Si défini, le candidat choisi est une proposition PENDING. */
+      proposalId?: string;
     }
-  | { action: 'skip' }
-  | { action: 'ignore_series' }
-  | { action: 'open_contribution' }
-  | { action: 'configure_site' };
+  | { action: "skip" }
+  | { action: "ignore_series" }
+  | { action: "open_contribution" }
+  | { action: "configure_site" };
 
 export interface ConfirmationCardOptions {
   detectedTitle: string;
   episode?: number;
   season?: number;
-  kind: 'anime' | 'manga';
+  kind: "anime" | "manga";
   sourceUrl?: string;
-  candidates: CandidateAnime[];
+  candidates: CandidateMedia[];
 }
 
 interface CardState {
   detectedTitle: string;
+  kind: "anime" | "manga";
   /** Résultats initiaux (discovery), restaurés si l'user vide la recherche. */
-  originalCandidates: CandidateAnime[];
-  candidates: CandidateAnime[];
+  originalCandidates: CandidateMedia[];
+  candidates: CandidateMedia[];
   chosenId?: string;
   isRewatch: boolean;
   suggestAlias: boolean;
@@ -204,180 +212,232 @@ interface CardState {
  * `true` si le titre détecté est déjà connu de l'anime (titre principal ou alias).
  * Comparaison case-insensitive + accent-insensitive.
  */
-function isTitleAlreadyKnown(detectedTitle: string, anime?: CandidateAnime): boolean {
+function isTitleAlreadyKnown(
+  detectedTitle: string,
+  anime?: CandidateMedia,
+): boolean {
   if (!anime) return true; // pas de candidat → on cache la suggestion (rien à faire)
   const detected = detectedTitle?.trim();
   if (!detected) return true;
-  const candidates = [anime.title, ...(anime.alias ?? [])].filter(Boolean) as string[];
+  const candidates = [anime.title, ...(anime.alias ?? [])].filter(
+    Boolean,
+  ) as string[];
   return candidates.some(
-    (t) => t.localeCompare(detected, undefined, { sensitivity: 'accent' }) === 0,
+    (t) =>
+      t.localeCompare(detected, undefined, { sensitivity: "accent" }) === 0,
   );
 }
 
-export function showConfirmationCard(opts: ConfirmationCardOptions): Promise<ConfirmationChoice> {
+export function showConfirmationCard(
+  opts: ConfirmationCardOptions,
+): Promise<ConfirmationChoice> {
+  console.log("showConfirmationCard", opts);
   removeExisting();
   return new Promise((resolve) => {
-    const host = document.createElement('div');
-    host.id = TOAST_ID;
-    host.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:2147483647;font-family:${FONT_STACK};`;
-    const shadow = host.attachShadow({ mode: 'closed' });
+    try {
+      const host = document.createElement("div");
+      host.id = TOAST_ID;
+      host.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:2147483647;font-family:${FONT_STACK};`;
+      const shadow = host.attachShadow({ mode: "closed" });
 
-    const initialPick = opts.candidates[0];
-    const state: CardState = {
-      detectedTitle: opts.detectedTitle,
-      originalCandidates: opts.candidates,
-      candidates: opts.candidates,
-      chosenId: initialPick?.id,
-      isRewatch: initialPick?.existingListEntry?.status === 'COMPLETED',
-      suggestAlias: false,
-    };
+      const initialPick = opts.candidates[0];
+      const state: CardState = {
+        detectedTitle: opts.detectedTitle,
+        kind: opts.kind,
+        originalCandidates: opts.candidates,
+        candidates: opts.candidates,
+        chosenId: initialPick?.id,
+        isRewatch:
+          opts.kind === "anime" &&
+          initialPick?.existingListEntry?.status === "COMPLETED",
+        suggestAlias: false,
+      };
 
-    shadow.innerHTML = renderShell(opts.detectedTitle, opts.episode, opts.season);
-    renderCandidates(shadow, state);
-    updateAliasSection(shadow, state);
-    document.documentElement.appendChild(host);
-
-    let resolved = false;
-    const finish = (choice: ConfirmationChoice) => {
-      if (resolved) return;
-      resolved = true;
-      removeExisting();
-      resolve(choice);
-    };
-
-    // Boutons fixes (header + actions du bas)
-    shadow.querySelector('#actunime-close')?.addEventListener('click', () =>
-      finish({ action: 'skip' }),
-    );
-    shadow.querySelector('#actunime-confirm')?.addEventListener('click', () => {
-      if (!state.chosenId) return;
-      const chosen = state.candidates.find((c) => c.id === state.chosenId);
-      if (!chosen) return;
-      const detected = state.detectedTitle?.trim();
-      const shouldSuggest =
-        state.suggestAlias && !!detected && !isTitleAlreadyKnown(detected, chosen);
-      finish({
-        action: 'confirm',
-        chosenAnimeId: state.chosenId,
-        chosenTitle: chosen.title,
-        chosenCoverUrl: chosen.coverUrl,
-        isRewatch: state.isRewatch,
-        suggestAliasFor: shouldSuggest ? detected : undefined,
-      });
-    });
-    shadow.querySelector('#actunime-skip')?.addEventListener('click', () =>
-      finish({ action: 'skip' }),
-    );
-    shadow.querySelector('#actunime-ignore')?.addEventListener('click', () =>
-      finish({ action: 'ignore_series' }),
-    );
-    shadow.querySelector('#actunime-configure-site')?.addEventListener('click', () => {
-      finish({ action: 'configure_site' });
-    });
-    shadow.querySelector('#actunime-contribute')?.addEventListener('click', async () => {
-      const btn = shadow.querySelector<HTMLButtonElement>('#actunime-contribute');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '…';
-      }
-      // Plus de redirection vers Actunime-Web : on stocke la demande dans le
-      // storage et on ferme la card. L'user clique l'icône extension dans la
-      // barre d'outils ; le popup voit le flag et ouvre directement le form.
-      const res = (await sendMessage({
-        type: 'OPEN_CONTRIBUTION_FORM',
-        payload: {
-          title: state.detectedTitle,
-          season: opts.season,
-          episode: opts.episode,
-          sourceUrl: opts.sourceUrl,
-        },
-      })) as { ok: boolean; error?: string };
-      if (res.ok) {
-        finish({ action: 'open_contribution' });
-        showToast(
-          'Ouvre l\'extension Actunime dans la barre d\'outils pour finaliser ta proposition.',
-          'info',
-          7000,
-        );
-      } else if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'Proposer son ajout';
-      }
-    });
-
-    // Toggle rewatch
-    const rewatchToggle = shadow.querySelector<HTMLInputElement>('#actunime-rewatch');
-    rewatchToggle?.addEventListener('change', () => {
-      state.isRewatch = rewatchToggle.checked;
-    });
-
-    // Toggle suggestion alias
-    const aliasToggle = shadow.querySelector<HTMLInputElement>('#actunime-alias');
-    aliasToggle?.addEventListener('change', () => {
-      state.suggestAlias = aliasToggle.checked;
-    });
-
-    // Champ recherche manuelle
-    const searchInput = shadow.querySelector<HTMLInputElement>('#actunime-search-input');
-    const searchBtn = shadow.querySelector<HTMLButtonElement>('#actunime-search-btn');
-    const searchStatus = shadow.querySelector<HTMLDivElement>('#actunime-search-status');
-
-    const restoreOriginal = () => {
-      state.candidates = state.originalCandidates;
-      state.chosenId = state.originalCandidates[0]?.id;
-      state.isRewatch =
-        state.originalCandidates[0]?.existingListEntry?.status === 'COMPLETED';
+      shadow.innerHTML = renderShell(
+        opts.detectedTitle,
+        opts.episode,
+        opts.season,
+        opts.kind,
+      );
       renderCandidates(shadow, state);
-      if (rewatchToggle) rewatchToggle.checked = state.isRewatch;
       updateAliasSection(shadow, state);
-      if (searchStatus) searchStatus.textContent = '';
-    };
+      document.documentElement.appendChild(host);
 
-    const runSearch = async () => {
-      const query = searchInput?.value?.trim() ?? '';
-      // Champ vide → restaurer les résultats initiaux (discovery).
-      if (query.length === 0) {
-        restoreOriginal();
-        return;
-      }
-      if (query.length < 2) {
-        if (searchStatus) searchStatus.textContent = 'Au moins 2 caractères.';
-        return;
-      }
-      if (searchBtn) {
-        searchBtn.disabled = true;
-        searchBtn.textContent = '…';
-      }
-      if (searchStatus) searchStatus.textContent = '';
-      try {
+      let resolved = false;
+      const finish = (choice: ConfirmationChoice) => {
+        if (resolved) return;
+        resolved = true;
+        removeExisting();
+        resolve(choice);
+      };
+
+      // Boutons fixes (header + actions du bas)
+      shadow
+        .querySelector("#actunime-close")
+        ?.addEventListener("click", () => finish({ action: "skip" }));
+      shadow
+        .querySelector("#actunime-confirm")
+        ?.addEventListener("click", () => {
+          if (!state.chosenId) return;
+          const chosen = state.candidates.find((c) => c.id === state.chosenId);
+          if (!chosen) return;
+          const detected = state.detectedTitle?.trim();
+          const shouldSuggest =
+            state.suggestAlias &&
+            !!detected &&
+            !isTitleAlreadyKnown(detected, chosen);
+          finish({
+            action: "confirm",
+            chosenMediaId: state.chosenId,
+            chosenTitle: chosen.title,
+            chosenCoverUrl: chosen.coverUrl,
+            isRewatch: state.isRewatch,
+            suggestAliasFor: shouldSuggest ? detected : undefined,
+            proposalId: chosen.isPending ? chosen.proposalId : undefined,
+          });
+        });
+      shadow
+        .querySelector("#actunime-skip")
+        ?.addEventListener("click", () => finish({ action: "skip" }));
+      shadow
+        .querySelector("#actunime-ignore")
+        ?.addEventListener("click", () => finish({ action: "ignore_series" }));
+      shadow
+        .querySelector("#actunime-configure-site")
+        ?.addEventListener("click", () => {
+          finish({ action: "configure_site" });
+        });
+      shadow.addEventListener("click", async (e) => {
+        const target = e.target as HTMLElement | null;
+        const contributeBtn = target?.closest<HTMLButtonElement>(
+          "#actunime-contribute, #actunime-search-contribute",
+        );
+        if (!contributeBtn) return;
+        contributeBtn.disabled = true;
+        const original = contributeBtn.textContent;
+        contributeBtn.textContent = "…";
         const res = (await sendMessage({
-          type: 'RESEARCH_QUERY',
-          payload: { query },
-        })) as ResearchResultPayload;
-        if (res.error) {
-          if (searchStatus) searchStatus.textContent = res.error;
-        } else if (res.empty || res.candidates.length === 0) {
-          if (searchStatus) searchStatus.textContent = 'Aucun résultat.';
+          type: "OPEN_CONTRIBUTION_FORM",
+          payload: {
+            kind: opts.kind,
+            title: state.detectedTitle,
+            season: opts.season,
+            episode: opts.kind === "anime" ? opts.episode : undefined,
+            chapter: opts.kind === "manga" ? opts.episode : undefined,
+            sourceUrl: opts.sourceUrl,
+          },
+        })) as { ok: boolean; error?: string };
+        if (res.ok) {
+          finish({ action: "open_contribution" });
+          showToast(
+            "Ouvre l'extension Actunime dans la barre d'outils pour finaliser ta proposition.",
+            "info",
+            7000,
+          );
         } else {
-          state.candidates = res.candidates;
-          state.chosenId = res.candidates[0]?.id;
-          state.isRewatch = res.candidates[0]?.existingListEntry?.status === 'COMPLETED';
-          renderCandidates(shadow, state);
-          if (rewatchToggle) rewatchToggle.checked = state.isRewatch;
-          updateAliasSection(shadow, state);
+          contributeBtn.disabled = false;
+          contributeBtn.textContent = original;
         }
-      } finally {
-        if (searchBtn) {
-          searchBtn.disabled = false;
-          searchBtn.textContent = 'Rechercher';
-        }
-      }
-    };
+      });
 
-    searchBtn?.addEventListener('click', runSearch);
-    searchInput?.addEventListener('keydown', (e) => {
-      if ((e as KeyboardEvent).key === 'Enter') runSearch();
-    });
+      // Toggle rewatch
+      const rewatchToggle =
+        shadow.querySelector<HTMLInputElement>("#actunime-rewatch");
+      rewatchToggle?.addEventListener("change", () => {
+        state.isRewatch = rewatchToggle.checked;
+      });
+
+      // Toggle suggestion alias
+      const aliasToggle =
+        shadow.querySelector<HTMLInputElement>("#actunime-alias");
+      aliasToggle?.addEventListener("change", () => {
+        state.suggestAlias = aliasToggle.checked;
+      });
+
+      // Champ recherche manuelle
+      const searchInput = shadow.querySelector<HTMLInputElement>(
+        "#actunime-search-input",
+      );
+      const searchBtn = shadow.querySelector<HTMLButtonElement>(
+        "#actunime-search-btn",
+      );
+      const searchStatus = shadow.querySelector<HTMLDivElement>(
+        "#actunime-search-status",
+      );
+
+      const restoreOriginal = () => {
+        state.candidates = state.originalCandidates;
+        state.chosenId = state.originalCandidates[0]?.id;
+        state.isRewatch =
+          state.kind === "anime" &&
+          state.originalCandidates[0]?.existingListEntry?.status ===
+            "COMPLETED";
+        renderCandidates(shadow, state);
+        if (rewatchToggle) rewatchToggle.checked = state.isRewatch;
+        updateAliasSection(shadow, state);
+        if (searchStatus) searchStatus.textContent = "";
+      };
+
+      const runSearch = async () => {
+        const query = searchInput?.value?.trim() ?? "";
+        // Champ vide → restaurer les résultats initiaux (discovery).
+        if (query.length === 0) {
+          restoreOriginal();
+          return;
+        }
+        if (query.length < 2) {
+          if (searchStatus) searchStatus.textContent = "Au moins 2 caractères.";
+          return;
+        }
+        if (searchBtn) {
+          searchBtn.disabled = true;
+          searchBtn.textContent = "…";
+        }
+        if (searchStatus) searchStatus.textContent = "";
+        try {
+          const res = (await sendMessage({
+            type: "RESEARCH_QUERY",
+            payload: { query, kind: state.kind },
+          })) as ResearchResultPayload;
+          if (res.error) {
+            if (searchStatus) {
+              searchStatus.textContent = res.error;
+              searchStatus.className = "search-status";
+            }
+          } else if (res.empty || res.candidates.length === 0) {
+            if (searchStatus) {
+              searchStatus.className = "search-status no-results";
+              searchStatus.innerHTML = `<span>Aucun résultat.</span><button type="button" id="actunime-search-contribute" class="search-contribute">Proposer son ajout →</button>`;
+            }
+          } else {
+            state.candidates = res.candidates;
+            state.chosenId = res.candidates[0]?.id;
+            state.isRewatch =
+              state.kind === "anime" &&
+              res.candidates[0]?.existingListEntry?.status === "COMPLETED";
+            renderCandidates(shadow, state);
+            if (rewatchToggle) rewatchToggle.checked = state.isRewatch;
+            updateAliasSection(shadow, state);
+            if (searchStatus) {
+              searchStatus.textContent = "";
+              searchStatus.className = "search-status";
+            }
+          }
+        } finally {
+          if (searchBtn) {
+            searchBtn.disabled = false;
+            searchBtn.textContent = "Rechercher";
+          }
+        }
+      };
+
+      searchBtn?.addEventListener("click", runSearch);
+      searchInput?.addEventListener("keydown", (e) => {
+        if ((e as KeyboardEvent).key === "Enter") runSearch();
+      });
+    } catch (err) {
+      console.error("showConfirmationCard error", err);
+    }
   });
 }
 
@@ -386,37 +446,40 @@ export function showConfirmationCard(opts: ConfirmationCardOptions): Promise<Con
  * de sélection. Appelée à l'initialisation et à chaque recherche manuelle.
  */
 function renderCandidates(shadow: ShadowRoot, state: CardState) {
-  const container = shadow.querySelector('#actunime-candidates');
+  const container = shadow.querySelector("#actunime-candidates");
   if (!container) return;
 
-  // État vide → message + CTA contribution. On laisse la recherche manuelle
-  // active en dessous + le bouton « Proposer son ajout » prend le relais.
   if (state.candidates.length === 0) {
     container.innerHTML = emptyStateHtml(state.detectedTitle);
     setConfirmEnabled(shadow, false);
-    setContributeVisible(shadow, true);
     return;
   }
 
-  container.innerHTML = state.candidates.map((c) => candidateHtml(c, c.id === state.chosenId)).join('');
+  container.innerHTML = state.candidates
+    .map((c) => candidateHtml(c, c.id === state.chosenId, state.kind))
+    .join("");
   setConfirmEnabled(shadow, true);
-  setContributeVisible(shadow, false);
 
-  shadow.querySelectorAll<HTMLInputElement>('input[name="actunime-candidate"]').forEach((r) => {
-    r.addEventListener('change', () => {
-      state.chosenId = r.value;
-      const cand = state.candidates.find((c) => c.id === r.value);
-      const completed = cand?.existingListEntry?.status === 'COMPLETED';
-      const rewatchToggle = shadow.querySelector<HTMLInputElement>('#actunime-rewatch');
-      if (rewatchToggle) {
-        rewatchToggle.checked = completed;
-        state.isRewatch = completed;
-      }
-      shadow.querySelectorAll('.candidate').forEach((el) => el.classList.remove('selected'));
-      r.closest('.candidate')?.classList.add('selected');
-      updateAliasSection(shadow, state);
+  shadow
+    .querySelectorAll<HTMLInputElement>('input[name="actunime-candidate"]')
+    .forEach((r) => {
+      r.addEventListener("change", () => {
+        state.chosenId = r.value;
+        const cand = state.candidates.find((c) => c.id === r.value);
+        const completed = cand?.existingListEntry?.status === "COMPLETED";
+        const rewatchToggle =
+          shadow.querySelector<HTMLInputElement>("#actunime-rewatch");
+        if (rewatchToggle) {
+          rewatchToggle.checked = completed;
+          state.isRewatch = completed;
+        }
+        shadow
+          .querySelectorAll(".candidate")
+          .forEach((el) => el.classList.remove("selected"));
+        r.closest(".candidate")?.classList.add("selected");
+        updateAliasSection(shadow, state);
+      });
     });
-  });
 
   void hydrateCovers(shadow, state.candidates);
 }
@@ -434,9 +497,9 @@ function renderCandidates(shadow: ShadowRoot, state: CardState) {
  *     n'a pas proposé le bon résultat.
  */
 function updateAliasSection(shadow: ShadowRoot, state: CardState) {
-  const section = shadow.querySelector<HTMLElement>('#actunime-alias-section');
-  const label = shadow.querySelector<HTMLElement>('#actunime-alias-label');
-  const checkbox = shadow.querySelector<HTMLInputElement>('#actunime-alias');
+  const section = shadow.querySelector<HTMLElement>("#actunime-alias-section");
+  const label = shadow.querySelector<HTMLElement>("#actunime-alias-label");
+  const checkbox = shadow.querySelector<HTMLInputElement>("#actunime-alias");
   if (!section || !label || !checkbox) return;
 
   const chosen = state.candidates.find((c) => c.id === state.chosenId);
@@ -446,43 +509,47 @@ function updateAliasSection(shadow: ShadowRoot, state: CardState) {
   const known = isTitleAlreadyKnown(detected, chosen);
 
   if (!chosen || !detected || known || inOriginal) {
-    section.style.display = 'none';
+    section.style.display = "none";
     checkbox.checked = false;
     state.suggestAlias = false;
     return;
   }
 
-  section.style.display = 'flex';
+  section.style.display = "flex";
   label.innerHTML = `+ Ajouter <strong>« ${escapeHtml(detected)} »</strong> comme synonyme à <strong>« ${escapeHtml(chosen.title)} »</strong> <span class="hint">(la détection auto n'a pas trouvé cette œuvre — aide les futurs utilisateurs)</span>`;
 }
 
-async function hydrateCovers(shadow: ShadowRoot, candidates: CandidateAnime[]) {
+async function hydrateCovers(shadow: ShadowRoot, candidates: CandidateMedia[]) {
   await Promise.all(
     candidates.map(async (c) => {
       if (!c.coverUrl) {
-        console.info('[Actunime overlay] no coverUrl for', c.id, c.title);
+        console.info("[Actunime overlay] no coverUrl for", c.id, c.title);
         return;
       }
       const img = shadow.querySelector<HTMLImageElement>(
         `img[data-cover-for="${cssEscape(c.id)}"]`,
       );
       if (!img) return;
-      if (c.coverUrl.startsWith('data:')) {
+      if (c.coverUrl.startsWith("data:")) {
         img.src = c.coverUrl;
         return;
       }
       try {
         const res = (await sendMessage({
-          type: 'FETCH_IMAGE',
+          type: "FETCH_IMAGE",
           payload: { url: c.coverUrl },
         })) as FetchImageResultPayload;
         if (!res.ok || !res.dataUrl) {
-          console.info('[Actunime overlay] fetch failed', c.coverUrl, res.error);
+          console.info(
+            "[Actunime overlay] fetch failed",
+            c.coverUrl,
+            res.error,
+          );
           return;
         }
         img.src = res.dataUrl;
       } catch (err) {
-        console.info('[Actunime overlay] fetch crashed', c.coverUrl, err);
+        console.info("[Actunime overlay] fetch crashed", c.coverUrl, err);
       }
     }),
   );
@@ -495,43 +562,51 @@ function emptyStateHtml(detectedTitle: string): string {
       <div class="empty-text">
         <strong>${escapeHtml(detectedTitle)}</strong> n'est pas (encore) sur Actunime.
       </div>
+      <button class="empty-contribute" id="actunime-contribute" type="button">
+        Proposer son ajout en quelques clics et ajoute-le à ta liste pour le suivi automatique
+      </button>
       <div class="empty-hint">
-        Tente une recherche manuelle ci-dessous, ou propose son ajout — l'œuvre apparaîtra
-        sur ta liste dès l'acceptation par les modérateurs.
+        Pas le bon résultat ? Tente une recherche manuelle ci-dessous.
       </div>
     </div>
   `;
 }
 
 function setConfirmEnabled(shadow: ShadowRoot, enabled: boolean) {
-  const btn = shadow.querySelector<HTMLButtonElement>('#actunime-confirm');
+  const btn = shadow.querySelector<HTMLButtonElement>("#actunime-confirm");
   if (!btn) return;
   btn.disabled = !enabled;
-  btn.style.opacity = enabled ? '1' : '0.4';
-  btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+  btn.style.opacity = enabled ? "1" : "0.4";
+  btn.style.cursor = enabled ? "pointer" : "not-allowed";
 }
 
-function setContributeVisible(shadow: ShadowRoot, visible: boolean) {
-  const btn = shadow.querySelector<HTMLButtonElement>('#actunime-contribute');
-  if (!btn) return;
-  btn.style.display = visible ? 'inline-flex' : 'none';
-}
-
-function candidateHtml(c: CandidateAnime, selected: boolean): string {
-  const checked = selected ? 'checked' : '';
-  const selectedCls = selected ? 'selected' : '';
-  const year = c.year ? ` <span class="year">(${escapeHtml(String(c.year))})</span>` : '';
+function candidateHtml(
+  c: CandidateMedia,
+  selected: boolean,
+  kind: "anime" | "manga",
+): string {
+  const checked = selected ? "checked" : "";
+  const selectedCls = selected ? "selected" : "";
+  const year = c.year
+    ? ` <span class="year">(${escapeHtml(String(c.year))})</span>`
+    : "";
   const cover = `<img class="cover" data-cover-for="${escapeHtml(c.id)}" alt="" />`;
+  const isManga = kind === "manga";
+  const consumedNum = isManga
+    ? c.existingListEntry?.chaptersRead
+    : c.existingListEntry?.episodesWatched;
+  const consumedAbbr = isManga ? "ch" : "ep";
+  const pendingBadge = c.isPending
+    ? `<span class="badge-pending">${c.supportCount && c.supportCount > 1 ? `Proposition · ${c.supportCount} soutiens` : "Proposition en attente"}</span>`
+    : "";
   const status = c.existingListEntry
     ? `<span class="badge-status">${escapeHtml(STATUS_LABELS[c.existingListEntry.status] ?? c.existingListEntry.status)}${
-        c.existingListEntry.episodesWatched !== undefined
-          ? ` · ep ${c.existingListEntry.episodesWatched}`
-          : ''
+        consumedNum !== undefined ? ` · ${consumedAbbr} ${consumedNum}` : ""
       }</span>`
-    : '';
+    : pendingBadge;
   const score = c.score
     ? `<span class="score">${Math.round(c.score * 100)}%</span>`
-    : '';
+    : "";
   return `
     <label class="candidate ${selectedCls}">
       <input type="radio" name="actunime-candidate" value="${escapeHtml(c.id)}" ${checked} />
@@ -548,9 +623,23 @@ function candidateHtml(c: CandidateAnime, selected: boolean): string {
  * Gabarit fixe (header, search, candidates container vide, toggles, actions).
  * Le contenu de `#actunime-candidates` est rempli par `renderCandidates`.
  */
-function renderShell(detectedTitle: string, episode?: number, season?: number): string {
-  const epLabel = episode ? ` · Épisode ${episode}` : '';
-  const seasonLabel = season ? ` · Saison ${season}` : '';
+function renderShell(
+  detectedTitle: string,
+  episode: number | undefined,
+  season: number | undefined,
+  kind: "anime" | "manga" = "anime",
+): string {
+  const isManga = kind === "manga";
+  const itemWordCap = isManga ? "Chapitre" : "Épisode";
+  const headerText = isManga ? "Suivre ce chapitre ?" : "Suivre cet épisode ?";
+  const placeholder = isManga
+    ? "Titre exact du manga…"
+    : "Titre exact de l'anime…";
+  const rewatchLabel = isManga
+    ? "↻ Marquer comme relecture"
+    : "↻ Marquer comme rewatch";
+  const epLabel = episode ? ` · ${itemWordCap} ${episode}` : "";
+  const seasonLabel = !isManga && season ? ` · Saison ${season}` : "";
 
   return `
     <style>
@@ -656,6 +745,14 @@ function renderShell(detectedTitle: string, episode?: number, season?: number): 
         font-size: 10px; font-weight: 500;
         border: 1px solid rgba(60, 90, 166, 0.4);
       }
+      .badge-pending {
+        display: inline-block; padding: 3px 8px; border-radius: 4px;
+        background: rgba(245, 158, 11, 0.15);
+        color: oklch(81.668% 0.14032 67.264);
+        font-size: 10px; font-weight: 600;
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        text-transform: uppercase; letter-spacing: 0.04em;
+      }
       .score { color: oklch(86.989% 0.06369 262.465); font-size: 10px; font-weight: 500; opacity: 0.75; }
 
       .search {
@@ -699,6 +796,26 @@ function renderShell(detectedTitle: string, episode?: number, season?: number): 
         color: oklch(86.989% 0.06369 262.465);
         min-height: 14px;
       }
+      .search-status.no-results {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .search-contribute {
+        background: oklch(66.906% 0.18376 248.826);
+        color: #030a1d;
+        border: none;
+        border-radius: 5px;
+        padding: 4px 10px;
+        font-size: 11px; font-weight: 600;
+        cursor: pointer;
+        font-family: ${FONT_STACK};
+        transition: background 120ms;
+      }
+      .search-contribute:hover { background: oklch(72% 0.18 248.826); }
+      .search-contribute:disabled { cursor: wait; opacity: 0.6; }
 
       .toggle {
         display: flex; align-items: center; gap: 10px;
@@ -790,15 +907,6 @@ function renderShell(detectedTitle: string, episode?: number, season?: number): 
         background: rgba(248, 113, 113, 0.08);
         border-color: rgba(248, 113, 113, 0.4);
       }
-      button.action.contribute {
-        background: oklch(38.858% 0.11938 258.881);
-        color: oklch(0.985 0.002 247.839);
-        border: 1px solid oklch(38.858% 0.11938 258.881);
-        font-weight: 600;
-      }
-      button.action.contribute:hover {
-        background: oklch(45% 0.13 258.881);
-      }
       button.action:disabled { cursor: not-allowed; }
 
       .empty {
@@ -821,6 +929,22 @@ function renderShell(detectedTitle: string, episode?: number, season?: number): 
         color: oklch(66.906% 0.18376 248.826);
         font-weight: 600;
       }
+      .empty-contribute {
+        margin: 14px 0 10px;
+        max-width: 360px;
+        padding: 10px 16px;
+        background: oklch(66.906% 0.18376 248.826);
+        color: #030a1d;
+        border: 1px solid oklch(66.906% 0.18376 248.826);
+        border-radius: 8px;
+        font-size: 12.5px; font-weight: 600;
+        line-height: 1.4;
+        cursor: pointer;
+        font-family: ${FONT_STACK};
+        transition: background 120ms;
+      }
+      .empty-contribute:hover { background: oklch(72% 0.18 248.826); }
+      .empty-contribute:disabled { cursor: wait; opacity: 0.6; }
       .empty-hint {
         font-size: 11px;
         line-height: 1.5;
@@ -831,7 +955,7 @@ function renderShell(detectedTitle: string, episode?: number, season?: number): 
     <div class="card">
       <div class="header">
         <div>
-          <h3><span class="badge-actunime">Actunime</span>Suivre cet épisode ?</h3>
+          <h3><span class="badge-actunime">Actunime</span>${escapeHtml(headerText)}</h3>
           <div class="sub">${escapeHtml(detectedTitle)}${epLabel}${seasonLabel}</div>
         </div>
         <button class="close" id="actunime-close" aria-label="Fermer">×</button>
@@ -840,15 +964,19 @@ function renderShell(detectedTitle: string, episode?: number, season?: number): 
       <div class="search">
         <div class="search-label">Pas le bon résultat ? Recherche manuelle :</div>
         <div class="search-row">
-          <input type="text" id="actunime-search-input" placeholder="Titre exact de l'anime…" />
+          <input type="text" id="actunime-search-input" placeholder="${escapeHtml(placeholder)}" />
           <button id="actunime-search-btn">Rechercher</button>
         </div>
         <div class="search-status" id="actunime-search-status"></div>
       </div>
-      <label class="toggle">
+      ${
+        isManga
+          ? ""
+          : `<label class="toggle">
         <input type="checkbox" id="actunime-rewatch" />
-        <span>↻ Marquer comme rewatch</span>
-      </label>
+        <span>${escapeHtml(rewatchLabel)}</span>
+      </label>`
+      }
       <label class="toggle alias-toggle" id="actunime-alias-section" style="display:none;">
         <input type="checkbox" id="actunime-alias" />
         <span class="alias-label" id="actunime-alias-label"></span>
@@ -859,7 +987,6 @@ function renderShell(detectedTitle: string, episode?: number, season?: number): 
       </div>
       <div class="actions">
         <button class="action primary" id="actunime-confirm">Suivre</button>
-        <button class="action contribute" id="actunime-contribute" style="display:none;" title="Créer une proposition d'ajout sur Actunime">Proposer son ajout</button>
         <button class="action secondary" id="actunime-skip">Pas maintenant</button>
         <button class="action danger" id="actunime-ignore" title="Ne plus me proposer pour cette série">Ignorer</button>
       </div>
@@ -874,28 +1001,35 @@ function renderShell(detectedTitle: string, episode?: number, season?: number): 
  * affichera juste un toast d'info en retour. Géré côté API ultérieurement
  * (pour V0.2 le handler est un stub qui retourne false).
  */
-export async function suggestAlias(animeId: string, alias: string): Promise<SuggestAliasResultPayload> {
-  return (await sendMessage({
-    type: 'SUGGEST_ALIAS',
+export async function suggestAlias(
+  animeId: string,
+  alias: string,
+): Promise<SuggestAliasResultPayload> {
+  return await sendMessage({
+    type: "SUGGEST_ALIAS",
     payload: { animeId, alias },
-  })) as SuggestAliasResultPayload;
+  });
 }
 
 // ─────────────────────── Badge persistant « Vous regardez … » ───────────────
 
 export interface WatchingBadgeOptions {
+  /** Type de média — adapte les libellés (épisode/chapitre, regardes/lis). */
+  kind?: "anime" | "manga";
   /** Titre Actunime affiché dans le badge. */
   matchedTitle: string;
   /** URL absolue du poster, optionnel. */
   coverUrl?: string | null;
   episode?: number;
+  chapter?: number;
   season?: number;
-  /** Mode de tracking actif → adapte le message « sera marqué vu… ». */
-  mode: 'video' | 'audio';
-  /** État de la liste user pour cet anime (statut + episodes vus). */
+  /** Mode de tracking actif → adapte le message. */
+  mode: "audio" | "manual";
+  /** État de la liste user pour cet anime/manga (statut + épisodes/chapitres). */
   listProgress?: {
     status: string;
     episodesWatched?: number;
+    chaptersRead?: number;
     rewatchCount?: number;
   } | null;
   /** Durée d'affichage avant auto-dismiss. Défaut 7 s. */
@@ -906,6 +1040,13 @@ export interface WatchingBadgeOptions {
   onMarkNow: () => void | Promise<void>;
   /** Callback : l'user clique « Ignorer cette série ». */
   onIgnore: () => void | Promise<void>;
+  /** Callback : l'user veut reconfigurer le pattern du site (relance le wizard). */
+  onReconfigure?: () => void | Promise<void>;
+  /** Bouton expérimental « Reprendre au chap./ép. N » — fourni si pattern d'URL détecté + retard sur la liste. */
+  resume?: {
+    targetNumber: number;
+    onResume: () => void | Promise<void>;
+  };
 }
 
 /**
@@ -914,32 +1055,41 @@ export interface WatchingBadgeOptions {
  * a déjà été vu.
  */
 function formatListProgress(
-  progress: WatchingBadgeOptions['listProgress'],
-  currentEpisode: number | undefined,
+  progress: WatchingBadgeOptions["listProgress"],
+  currentNumber: number | undefined,
+  kind: "anime" | "manga" = "anime",
 ): string {
-  if (!progress) return '';
+  if (!progress) return "";
   const statusLabels: Record<string, string> = {
-    WATCHING: 'En cours',
-    READING: 'En cours',
-    COMPLETED: 'Terminé',
-    ON_HOLD: 'En pause',
-    DROPPED: 'Abandonné',
-    PLAN_TO_WATCH: 'Planifié',
-    PLAN_TO_READ: 'Planifié',
+    WATCHING: "En cours",
+    READING: "En cours",
+    COMPLETED: "Terminé",
+    ON_HOLD: "En pause",
+    DROPPED: "Abandonné",
+    PLAN_TO_WATCH: "Planifié",
+    PLAN_TO_READ: "Planifié",
   };
   const status = statusLabels[progress.status] ?? progress.status;
-  const watched = progress.episodesWatched ?? 0;
+  const consumed =
+    kind === "manga"
+      ? (progress.chaptersRead ?? 0)
+      : (progress.episodesWatched ?? 0);
+  const consumedLabel = kind === "manga" ? "lus" : "vus";
+  const nextLabel = kind === "manga" ? "prochain chapitre" : "prochain épisode";
+  const seenLabel = kind === "manga" ? "déjà lu" : "déjà vu";
 
-  let suffix = '';
-  if (currentEpisode !== undefined) {
-    if (currentEpisode === watched + 1) suffix = ' · prochain épisode';
-    else if (currentEpisode <= watched) suffix = ' · déjà vu';
-    else if (currentEpisode > watched + 1) suffix = ` · saut ${currentEpisode - watched - 1}`;
+  let suffix = "";
+  if (currentNumber !== undefined) {
+    if (currentNumber === consumed + 1) suffix = ` · ${nextLabel}`;
+    else if (currentNumber <= consumed) suffix = ` · ${seenLabel}`;
+    else if (currentNumber > consumed + 1)
+      suffix = ` · saut ${currentNumber - consumed - 1}`;
   }
-  const rewatchHint = progress.rewatchCount && progress.rewatchCount > 0
-    ? ` · ${progress.rewatchCount}× rewatch`
-    : '';
-  return `${escapeHtml(status)} · ${watched} vus${suffix}${rewatchHint}`;
+  const rewatchHint =
+    kind === "anime" && progress.rewatchCount && progress.rewatchCount > 0
+      ? ` · ${progress.rewatchCount}× rewatch`
+      : "";
+  return `${escapeHtml(status)} · ${consumed} ${consumedLabel}${suffix}${rewatchHint}`;
 }
 
 /**
@@ -951,31 +1101,47 @@ function formatListProgress(
  */
 export function showWatchingBadge(opts: WatchingBadgeOptions): void {
   removeWatchingBadge();
-  const host = document.createElement('div');
+  const host = document.createElement("div");
   host.id = BADGE_ID;
   host.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:2147483646;font-family:${FONT_STACK};`;
-  const shadow = host.attachShadow({ mode: 'closed' });
+  const shadow = host.attachShadow({ mode: "closed" });
 
-  const epText = opts.episode ? `l'épisode ${opts.episode}` : 'cet épisode';
-  const seasonHint = opts.season ? ` (saison ${opts.season})` : '';
+  const isManga = opts.kind === "manga";
+  const currentNumber = isManga ? opts.chapter : opts.episode;
+  const numberWord = isManga ? "chapitre" : "épisode";
+  const numberWordCap = isManga ? "Chapitre" : "Épisode";
+  const epText = currentNumber
+    ? `${numberWordCap} ${currentNumber}`
+    : `Numéro de ${numberWord} non détecté`;
+  const seasonHint = !isManga && opts.season ? ` (saison ${opts.season})` : "";
+  const labelHeader = isManga ? "Vous lisez" : "Vous regardez";
+  const markBtnLabel = isManga ? "Marquer lu" : "Marquer vu";
 
-  // Statut liste user — affiché en plus du titre / episode courant.
-  const listProgressLabel = formatListProgress(opts.listProgress, opts.episode);
+  const listProgressLabel = formatListProgress(
+    opts.listProgress,
+    currentNumber,
+    opts.kind,
+  );
 
-  // Si l'épisode courant est ≤ celui déjà vu → c'est probablement un rewatch.
-  const isAlreadyWatched =
-    opts.episode !== undefined &&
-    opts.listProgress?.episodesWatched !== undefined &&
-    opts.episode <= opts.listProgress.episodesWatched;
+  const consumed = isManga
+    ? opts.listProgress?.chaptersRead
+    : opts.listProgress?.episodesWatched;
+  const isAlreadyConsumed =
+    currentNumber !== undefined &&
+    consumed !== undefined &&
+    currentNumber <= consumed;
 
-  const trackingHint = isAlreadyWatched
-    ? 'Vous avez déjà vu cet épisode. Cliquez « Marquer vu » pour le relire (rewatch).'
-    : opts.mode === 'video'
-      ? 'L\'épisode que tu regardes sera mis à jour automatiquement dans ta liste, ou immédiatement avec « Marquer vu ».'
-      : 'L\'épisode que tu regardes sera mis à jour dans ta liste au changement d\'épisode, ou immédiatement avec « Marquer vu ».';
+  const trackingHint =
+    currentNumber === undefined
+      ? `Le numéro n'a pas été détecté sur cette page. Clique « Modifier » pour reconfigurer la détection sur ce site.`
+      : isAlreadyConsumed
+        ? `Vous avez déjà ${isManga ? "lu" : "vu"} ce ${numberWord}. Cliquez « ${markBtnLabel} » pour ${isManga ? "le relire" : "le relire (rewatch)"}.`
+        : opts.mode === "audio"
+          ? `L'épisode que tu regardes sera mis à jour dans ta liste au changement d'épisode, ou immédiatement avec « ${markBtnLabel} ».`
+          : `Clique « ${markBtnLabel} » pour mettre à jour ta liste avec ce ${numberWord}.`;
 
   const cover = opts.coverUrl
-    ? `<img class="cover" data-cover-for="${escapeHtml('badge')}" alt="" />`
+    ? `<img class="cover" data-cover-for="${escapeHtml("badge")}" alt="" />`
     : `<div class="cover-placeholder"></div>`;
 
   shadow.innerHTML = `
@@ -1069,21 +1235,46 @@ export function showWatchingBadge(opts: WatchingBadgeOptions): void {
         border: 1px solid rgba(248, 113, 113, 0.25);
       }
       button.btn.danger:hover { background: rgba(248, 113, 113, 0.08); border-color: rgba(248, 113, 113, 0.4); }
+      button.btn.resume {
+        background: rgba(99, 102, 241, 0.12);
+        color: oklch(86.989% 0.06369 262.465);
+        border: 1px solid rgba(99, 102, 241, 0.35);
+        position: relative;
+      }
+      button.btn.resume:hover { background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.55); }
+      button.btn.resume .exp {
+        position: absolute; top: -5px; right: -5px;
+        font-size: 8px; line-height: 1;
+        padding: 2px 4px; border-radius: 3px;
+        background: oklch(66.906% 0.18376 248.826); color: #030a1d;
+        font-weight: 700; letter-spacing: 0.05em;
+      }
     </style>
     <div class="badge">
       <div class="header">
         ${cover}
         <div class="info">
-          <div class="label">Vous regardez</div>
+          <div class="label">${escapeHtml(labelHeader)}</div>
           <div class="title">${escapeHtml(opts.matchedTitle)}${escapeHtml(seasonHint)}</div>
           <div class="episode">${escapeHtml(epText.charAt(0).toUpperCase() + epText.slice(1))}</div>
-          ${listProgressLabel ? `<div class="list-progress">${listProgressLabel}</div>` : ''}
+          ${listProgressLabel ? `<div class="list-progress">${listProgressLabel}</div>` : ""}
         </div>
       </div>
       <div class="hint">${escapeHtml(trackingHint)}</div>
+      ${
+        opts.resume
+          ? `<div class="actions">
+              <button class="btn resume" id="actunime-badge-resume" title="Aller directement au ${numberWord} ${opts.resume.targetNumber} (fonctionnalité expérimentale)">Reprendre au ${numberWord} ${opts.resume.targetNumber}<span class="exp">EXP</span></button>
+            </div>`
+          : ""
+      }
       <div class="actions">
-        <button class="btn primary" id="actunime-badge-mark">Marquer vu</button>
-        <button class="btn secondary" id="actunime-badge-edit" title="Choisir un autre anime">Modifier</button>
+        <button class="btn primary" id="actunime-badge-mark"${currentNumber === undefined ? " disabled" : ""}>${escapeHtml(markBtnLabel)}</button>
+        ${
+          currentNumber === undefined && opts.onReconfigure
+            ? `<button class="btn secondary" id="actunime-badge-reconfigure" title="Relancer l'assistant de configuration">Configurer</button>`
+            : `<button class="btn secondary" id="actunime-badge-edit" title="Choisir une autre œuvre">Modifier</button>`
+        }
         <button class="btn danger" id="actunime-badge-ignore" title="Ne plus tracker cette série">Ignorer</button>
       </div>
     </div>
@@ -1091,52 +1282,63 @@ export function showWatchingBadge(opts: WatchingBadgeOptions): void {
   document.documentElement.appendChild(host);
 
   const disableAll = () => {
-    shadow.querySelectorAll<HTMLButtonElement>('button.btn').forEach((b) => {
+    shadow.querySelectorAll<HTMLButtonElement>("button.btn").forEach((b) => {
       b.disabled = true;
     });
   };
 
   const wireBtn = (id: string, cb: () => void | Promise<void>) => {
-    shadow.querySelector<HTMLButtonElement>(`#${id}`)?.addEventListener('click', async () => {
-      disableAll();
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      await cb();
-    });
+    shadow
+      .querySelector<HTMLButtonElement>(`#${id}`)
+      ?.addEventListener("click", async () => {
+        disableAll();
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        await cb();
+      });
   };
-  wireBtn('actunime-badge-mark', opts.onMarkNow);
-  wireBtn('actunime-badge-edit', opts.onEdit);
-  wireBtn('actunime-badge-ignore', opts.onIgnore);
+  wireBtn("actunime-badge-mark", opts.onMarkNow);
+  wireBtn("actunime-badge-edit", opts.onEdit);
+  wireBtn("actunime-badge-ignore", opts.onIgnore);
+  if (opts.onReconfigure) {
+    wireBtn("actunime-badge-reconfigure", opts.onReconfigure);
+  }
+  if (opts.resume) {
+    wireBtn("actunime-badge-resume", opts.resume.onResume);
+  }
 
   // Auto-dismiss avec hover-pause : le timer est suspendu tant que la souris
   // est sur le badge (laisse le temps de cliquer un bouton).
   const duration = opts.durationMs ?? 7_000;
-  let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(removeWatchingBadge, duration);
-  host.addEventListener('mouseenter', () => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
+    removeWatchingBadge,
+    duration,
+  );
+  host.addEventListener("mouseenter", () => {
     if (timeoutId) {
       clearTimeout(timeoutId);
       timeoutId = null;
     }
   });
-  host.addEventListener('mouseleave', () => {
+  host.addEventListener("mouseleave", () => {
     if (!timeoutId) timeoutId = setTimeout(removeWatchingBadge, duration);
   });
 
   if (opts.coverUrl) {
-    if (opts.coverUrl.startsWith('data:')) {
-      const img = shadow.querySelector<HTMLImageElement>('img.cover');
+    if (opts.coverUrl.startsWith("data:")) {
+      const img = shadow.querySelector<HTMLImageElement>("img.cover");
       if (img) img.src = opts.coverUrl;
     } else {
       void (async () => {
         try {
           const res = (await sendMessage({
-            type: 'FETCH_IMAGE',
+            type: "FETCH_IMAGE",
             payload: { url: opts.coverUrl as string },
           })) as FetchImageResultPayload;
           if (res.ok && res.dataUrl) {
-            const img = shadow.querySelector<HTMLImageElement>('img.cover');
+            const img = shadow.querySelector<HTMLImageElement>("img.cover");
             if (img) img.src = res.dataUrl;
           }
         } catch {
@@ -1150,4 +1352,106 @@ export function showWatchingBadge(opts: WatchingBadgeOptions): void {
 export function removeWatchingBadge(): void {
   const el = document.getElementById(BADGE_ID);
   if (el) el.remove();
+}
+
+export function removeConfigPrompt(): void {
+  const el = document.getElementById(CONFIG_PROMPT_ID);
+  if (el) el.remove();
+}
+
+export function showConfigPrompt(opts: {
+  kind: "anime" | "manga";
+  onConfigure: () => void;
+  onDismiss?: () => void;
+}): void {
+  if (document.getElementById(CONFIG_PROMPT_ID)) return;
+  const host = document.createElement("div");
+  host.id = CONFIG_PROMPT_ID;
+  host.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:2147483645;font-family:${FONT_STACK};`;
+  const shadow = host.attachShadow({ mode: "closed" });
+
+  const isManga = opts.kind === "manga";
+  const headline = isManga
+    ? "Site non configuré pour le suivi de tes mangas"
+    : "Site non configuré pour le suivi de tes animes";
+  const body = `Lance l'assistant pour qu'Actunime Sync identifie le titre et le ${isManga ? "chapitre" : "épisode"} sur ce site.`;
+
+  shadow.innerHTML = `
+    <style>
+      :host { all: initial; }
+      * { box-sizing: border-box; }
+      .prompt {
+        display: flex; flex-direction: column; gap: 10px;
+        padding: 12px 14px;
+        width: 320px; max-width: calc(100vw - 48px);
+        background: #030a1d;
+        color: oklch(0.985 0.002 247.839);
+        border: 1px dashed rgba(60, 90, 166, 0.5);
+        border-radius: 10px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(60, 90, 166, 0.15);
+        font-family: ${FONT_STACK};
+        font-size: 12px; line-height: 1.45;
+        animation: slideIn 220ms ease-out;
+      }
+      @keyframes slideIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      .header { display: flex; align-items: flex-start; gap: 10px; }
+      .badge {
+        flex-shrink: 0;
+        font-size: 10px; padding: 3px 8px; border-radius: 4px;
+        background: oklch(66.906% 0.18376 248.826); color: #030a1d;
+        font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      }
+      .close {
+        margin-left: auto; flex-shrink: 0;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        color: oklch(86.989% 0.06369 262.465);
+        cursor: pointer; font-size: 14px; line-height: 1;
+        width: 22px; height: 22px; border-radius: 4px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .close:hover { background: rgba(255, 255, 255, 0.08); }
+      .title { font-weight: 600; font-size: 12.5px; }
+      .body { color: oklch(86.989% 0.06369 262.465); }
+      .actions { display: flex; gap: 6px; padding-top: 4px; }
+      button.btn {
+        flex: 1; padding: 7px 8px;
+        border-radius: 6px;
+        font-size: 11px; font-weight: 600;
+        cursor: pointer;
+        font-family: ${FONT_STACK};
+        background: oklch(66.906% 0.18376 248.826);
+        color: #030a1d;
+        border: 1px solid oklch(66.906% 0.18376 248.826);
+        transition: background 120ms;
+      }
+      button.btn:hover { background: oklch(72% 0.18 248.826); }
+    </style>
+    <div class="prompt">
+      <div class="header">
+        <span class="badge">Actunime</span>
+        <button class="close" id="actunime-config-prompt-close" aria-label="Fermer">×</button>
+      </div>
+      <div class="title">${escapeHtml(headline)}</div>
+      <div class="body">${escapeHtml(body)}</div>
+      <div class="actions">
+        <button class="btn" id="actunime-config-prompt-launch">Configurer ce site</button>
+      </div>
+    </div>
+  `;
+
+  shadow
+    .querySelector("#actunime-config-prompt-launch")
+    ?.addEventListener("click", () => {
+      removeConfigPrompt();
+      void opts.onConfigure();
+    });
+  shadow
+    .querySelector("#actunime-config-prompt-close")
+    ?.addEventListener("click", () => {
+      removeConfigPrompt();
+      opts.onDismiss?.();
+    });
+
+  document.documentElement.appendChild(host);
 }
