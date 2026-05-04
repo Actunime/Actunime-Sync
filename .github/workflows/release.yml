@@ -1,7 +1,7 @@
 name: Release
 
 # Secrets requis (Settings → Secrets and variables → Actions) :
-#   - GH_TOKEN          : PAT avec scopes `repo` + `read:packages`
+#   - GH_TOKEN          : PAT avec scope `repo` (utilisé par semantic-release pour pousser le tag + créer la release)
 #   - BETA_API_URL      : ex. https://api.beta.actunime.fr
 #   - BETA_WEB_URL      : ex. https://beta.actunime.fr
 #   - PROD_API_URL      : ex. https://api.actunime.fr
@@ -36,13 +36,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-
-      - name: Authentification au registre GitHub Packages
-        # Nécessaire pour résoudre les dépendances `@actunime/*` privées.
-        run: |
-          touch .npmrc
-          echo "@actunime:registry=https://npm.pkg.github.com" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
 
       - name: Installation de pnpm
         uses: pnpm/action-setup@v4

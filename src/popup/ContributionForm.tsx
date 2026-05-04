@@ -21,7 +21,7 @@ import {
   CountrySelection,
   ListStatusLabels,
   MediaStatusSelection,
-} from '@actunime/types';
+} from '@/shared/actunime-constants';
 import {
   ArrowLeft,
   ImageOff,
