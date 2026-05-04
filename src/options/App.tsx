@@ -47,6 +47,7 @@ const STRATEGY_LABELS: Record<StrategyId, string> = {
   jsonld: 'JSON-LD (données structurées)',
   og: 'Open Graph (meta tags)',
   'url-tokens': "Tokens dans l'URL",
+  'document-title': 'Titre de la page',
   'dom-selectors': 'Sélecteurs DOM génériques',
   manual: 'Manuelle (sélecteurs CSS pointés)',
 };

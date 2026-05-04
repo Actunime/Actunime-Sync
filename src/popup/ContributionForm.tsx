@@ -20,6 +20,8 @@ import {
   AnimeListStatusArray,
   CountrySelection,
   ListStatusLabels,
+  MangaFormatSelection,
+  MangaListStatusArray,
   MediaStatusSelection,
 } from '@/shared/actunime-constants';
 import {
@@ -34,29 +36,46 @@ import {
 import { storage } from '@/shared/storage';
 import {
   sendMessage,
-  type ContributeProposeAnimeResultPayload,
+  type ContributeProposeMediaResultPayload,
 } from '@/shared/messaging';
 
 interface ContributionFormProps {
+  detectedKind?: 'anime' | 'manga';
   detectedTitle: string;
   detectedEpisode?: number;
+  detectedChapter?: number;
   onCancel: () => void;
   /** `joinedExisting=true` si une proposition d'un autre user a été rejointe. */
   onSuccess: (joinedExisting: boolean) => void;
 }
 
 export function ContributionForm({
+  detectedKind = 'anime',
   detectedTitle,
   detectedEpisode,
+  detectedChapter,
   onCancel,
   onSuccess,
 }: Readonly<ContributionFormProps>) {
+  const [kind, setKind] = useState<'anime' | 'manga'>(detectedKind);
   const [title, setTitle] = useState(detectedTitle);
-  const [format, setFormat] = useState<string>('SERIE');
+  const [aliasesRaw, setAliasesRaw] = useState('');
+  const [format, setFormat] = useState<string>(detectedKind === 'manga' ? 'MANGA' : 'SERIE');
   const [country, setCountry] = useState<string>('JAPAN');
   const [status, setStatus] = useState<string>('AIRING');
-  /** Statut côté liste user (différent du `status` diffusion ci-dessus). */
-  const [listStatus, setListStatus] = useState<string>('WATCHING');
+  const [listStatus, setListStatus] = useState<string>(
+    detectedKind === 'manga' ? 'READING' : 'WATCHING',
+  );
+
+  const formatOptions = kind === 'manga' ? MangaFormatSelection : AnimeFormatSelection;
+  const listStatusArray = kind === 'manga' ? MangaListStatusArray : AnimeListStatusArray;
+
+  const handleKindChange = (next: 'anime' | 'manga') => {
+    if (next === kind) return;
+    setKind(next);
+    setFormat(next === 'manga' ? 'MANGA' : 'SERIE');
+    setListStatus(next === 'manga' ? 'READING' : 'WATCHING');
+  };
   const [coverDataUrl, setCoverDataUrl] = useState<string | null>(null);
   const [coverLoading, setCoverLoading] = useState(true);
   const [coverError, setCoverError] = useState<string | null>(null);
@@ -135,18 +154,25 @@ export function ContributionForm({
     }
     setSubmitting(true);
     try {
+      const aliases = aliasesRaw
+        .split(/[,\n]/)
+        .map((a) => a.trim())
+        .filter((a) => a.length > 0);
       const res = (await sendMessage({
-        type: 'CONTRIBUTE_PROPOSE_ANIME',
+        type: 'CONTRIBUTE_PROPOSE_MEDIA',
         payload: {
+          kind,
           title: title.trim(),
+          aliases: aliases.length ? aliases : undefined,
           format,
           country,
           status,
           coverDataUrl,
           episode: detectedEpisode,
+          chapter: detectedChapter,
           listStatus,
         },
-      })) as ContributeProposeAnimeResultPayload;
+      })) as ContributeProposeMediaResultPayload;
       if (!res.ok) {
         setSubmitError(res.error);
         setSubmitting(false);
@@ -157,7 +183,19 @@ export function ContributionForm({
       setSubmitError((err as Error)?.message ?? 'Erreur inconnue.');
       setSubmitting(false);
     }
-  }, [title, format, country, status, coverDataUrl, detectedEpisode, listStatus, onSuccess]);
+  }, [
+    kind,
+    title,
+    aliasesRaw,
+    format,
+    country,
+    status,
+    coverDataUrl,
+    detectedEpisode,
+    detectedChapter,
+    listStatus,
+    onSuccess,
+  ]);
 
   return (
     <section className="rounded-md border border-primary/30 bg-primary/5 p-3 flex flex-col gap-3">
@@ -175,6 +213,37 @@ export function ContributionForm({
         </span>
       </header>
 
+      <div
+        role="tablist"
+        aria-label="Type de contenu"
+        className="grid grid-cols-2 gap-1 rounded-md border border-border bg-muted/20 p-1"
+      >
+        {(['anime', 'manga'] as const).map((k) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={kind === k}
+            onClick={() => handleKindChange(k)}
+            disabled={submitting}
+            className={`rounded text-xs font-medium py-1.5 transition-colors ${
+              kind === k
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {k === 'anime' ? 'Anime' : 'Manga'}
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-md border border-warning/40 bg-warning/5 p-2.5 text-[11px] leading-relaxed text-foreground">
+        <strong className="text-warning">Avant de proposer, vérifie d'abord</strong> avec
+        la recherche manuelle dans la card de confirmation — ton œuvre existe peut-être
+        déjà sous un titre légèrement différent. Si tu la trouves, la sélectionner
+        proposera automatiquement ton titre comme synonyme pour aider les autres.
+      </div>
+
       <div className="flex flex-col gap-2">
         <label className="text-xs font-medium">
           Titre <span className="text-destructive">*</span>
@@ -188,6 +257,24 @@ export function ContributionForm({
         />
       </div>
 
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium">
+          Synonymes / titres alternatifs <span className="text-muted-foreground font-normal">(optionnel)</span>
+        </label>
+        <input
+          type="text"
+          value={aliasesRaw}
+          onChange={(e) => setAliasesRaw(e.target.value)}
+          disabled={submitting}
+          placeholder="Titre anglais, original, abréviation… séparés par des virgules"
+          className="rounded-md border border-border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <p className="text-[10px] text-muted-foreground leading-snug">
+          Améliore la détection si d'autres utilisateurs ont des sites avec un titre différent
+          pour la même œuvre — moins de doublons à fusionner ensuite.
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium">Format</label>
@@ -197,7 +284,7 @@ export function ContributionForm({
             disabled={submitting}
             className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
           >
-            {AnimeFormatSelection.map((opt) => (
+            {formatOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -245,7 +332,7 @@ export function ContributionForm({
             disabled={submitting}
             className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
           >
-            {AnimeListStatusArray.map((s) => (
+            {listStatusArray.map((s) => (
               <option key={s} value={s}>
                 {ListStatusLabels[s]}
               </option>
