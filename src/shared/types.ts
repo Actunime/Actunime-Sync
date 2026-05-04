@@ -4,7 +4,13 @@ export type SiteKind = 'anime' | 'manga';
  * Stratégie de détection retenue par le wizard de configuration (E17).
  * `manual` = l'user a pointé les éléments du DOM lui-même via le pick visuel.
  */
-export type StrategyId = 'jsonld' | 'og' | 'url-tokens' | 'dom-selectors' | 'manual';
+export type StrategyId =
+  | 'jsonld'
+  | 'og'
+  | 'url-tokens'
+  | 'document-title'
+  | 'dom-selectors'
+  | 'manual';
 
 /**
  * Sélecteur numérique : un sélecteur CSS + optionnellement l'index du nombre
@@ -29,16 +35,24 @@ export interface NumericSelector {
  * Persistance 100 % `chrome.storage.local`, jamais transmis à l'API
  * (cf. ADR-008 — couche 3 patterns privés).
  */
+/**
+ * Mode de tracking de progression pour les manga. L'observer correspondant
+ * pousse `chaptersRead` quand son trigger est atteint.
+ */
+export type MangaTrackingMode = 'manual' | 'scroll' | 'page-counter' | 'next-button';
+
+export interface MangaTrackingConfig {
+  mode: MangaTrackingMode;
+  /** Sélecteur CSS — utilisé par les modes `page-counter` et `next-button`. */
+  selector?: string;
+  /** Seuil 0..1 pour le mode `scroll` (par défaut 0.9). */
+  threshold?: number;
+}
+
 export interface LearnedPattern {
-  /** Hostname normalisé. Ex: `www.example.com`. Sert de clé. */
   host: string;
   kind: SiteKind;
-  /** Stratégie validée par l'user pendant le wizard. */
   strategy: StrategyId;
-  /**
-   * Sélecteurs CSS pointés à la souris dans le mode pick visuel.
-   * Présents quand `strategy === 'manual'` ; absents pour les stratégies auto.
-   */
   manualSelectors?: {
     title: string;
     episode?: NumericSelector;
@@ -46,10 +60,11 @@ export interface LearnedPattern {
   };
   /**
    * Regex appliquée à `location.pathname` pour ne déclencher que sur les
-   * pages d'épisode et pas sur la home/listing/etc. Optionnel — dérivé
-   * automatiquement de l'URL d'apprentissage si l'user ne l'édite pas.
+   * pages d'épisode/chapitre et pas sur la home/listing/etc.
    */
   episodeUrlRegex?: string;
+  /** Configuration du tracking de progression pour les manga (kind === 'manga'). */
+  mangaTracking?: MangaTrackingConfig;
   createdAt: string;
   updatedAt: string;
 }

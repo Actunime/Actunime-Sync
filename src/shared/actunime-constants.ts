@@ -15,6 +15,14 @@ export const AnimeListStatusArray: IListStatus[] = [
   'PLAN_TO_WATCH',
 ];
 
+export const MangaListStatusArray: IListStatus[] = [
+  'READING',
+  'COMPLETED',
+  'ON_HOLD',
+  'DROPPED',
+  'PLAN_TO_READ',
+];
+
 export const ListStatusLabels: Record<IListStatus, string> = {
   WATCHING: 'En cours de visionnage',
   READING: 'En cours de lecture',
@@ -49,6 +57,42 @@ export const CountrySelection = [
   { value: 'KOREA', label: 'Corée du Sud', description: 'Une bande dessinée coréenne.' },
   { value: 'CHINA', label: 'Chine', description: 'Une bande dessinée chinoise.' },
   { value: 'OTHER', label: 'Autre', description: "Le type de pays n'est pas disponible dans ceux proposées." },
+];
+
+export const MangaFormatSelection = [
+  { value: 'MANGA', label: 'Manga', description: 'Manga japonais.' },
+  { value: 'MANHWA', label: 'Manhwa', description: 'Une bande dessinée coréenne.' },
+  { value: 'MANHUA', label: 'Manhua', description: 'Une bande dessinée chinoise.' },
+  {
+    value: 'LIGHT_NOVEL',
+    label: 'Light novel',
+    description:
+      'Un roman japonais qui est destiné à un public adulte et qui se lit sous forme de livres.',
+  },
+  {
+    value: 'WEB_LOVEL',
+    label: 'Web novel',
+    description: 'Un roman qui est publié en ligne et qui se lit dans un navigateur.',
+  },
+  {
+    value: 'GRAPHIC_NOVEL',
+    label: 'Graphic novel',
+    description:
+      'Un livre qui contient des images en noir et blanc ou en couleur, qui raconte une histoire.',
+  },
+  {
+    value: 'DOUJINSHI',
+    label: 'Doujinshi',
+    description:
+      "Un travail amateur de bande dessinée, généralement créé par des fans de la série ou de l'œuvre originale.",
+  },
+  {
+    value: 'ONE_SHOT',
+    label: 'One shot',
+    description: 'Une histoire qui se termine après un seul chapitre ou un seul volume.',
+  },
+  { value: 'OTHER', label: 'Autre', description: "Le type de source n'est pas disponible dans ceux proposées." },
+  { value: 'UNKNOWN', label: 'Inconnu', description: 'Le format du manga est inconnu.' },
 ];
 
 export const MediaStatusSelection = [

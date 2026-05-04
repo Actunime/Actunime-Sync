@@ -23,6 +23,7 @@ const VALID_STRATEGIES: StrategyId[] = [
   'jsonld',
   'og',
   'url-tokens',
+  'document-title',
   'dom-selectors',
   'manual',
 ];
