@@ -5,6 +5,7 @@
  */
 
 import type { StrategyResult } from '@/shared/messaging';
+import { extractFromText } from './title-parser';
 
 interface ExtractedLd {
   title?: string;
@@ -14,13 +15,19 @@ interface ExtractedLd {
   rawSnippet?: string;
 }
 
-const VIDEO_TYPES = new Set([
+const MEDIA_TYPES = new Set([
   'TVEpisode',
   'Episode',
   'Movie',
   'VideoObject',
   'AnimeEpisode',
   'AnimeSeries',
+  'ComicSeries',
+  'ComicIssue',
+  'ComicStory',
+  'Book',
+  'BookSeries',
+  'Article',
 ]);
 
 export function runJsonLdStrategy(): StrategyResult {
@@ -35,23 +42,33 @@ export function runJsonLdStrategy(): StrategyResult {
   const data = extractJsonLd();
   if (!data) return base;
 
-  const title = data.seriesTitle ?? data.title;
-  const result: StrategyResult = {
-    ...base,
-    title,
-    episode: data.episode,
-    season: data.season,
-    evidence: data.rawSnippet,
-  };
+  let title = data.seriesTitle ?? data.title;
+  let episode = data.episode;
+  let season = data.season;
+
+  if (episode === undefined && title) {
+    const fallback = extractFromText(title);
+    if (fallback?.episode !== undefined) {
+      episode = fallback.episode;
+      if (fallback.season !== undefined && season === undefined) season = fallback.season;
+      if (fallback.title) title = fallback.title;
+    }
+  }
 
   let confidence = 0;
   if (title) confidence += 0.5;
-  if (data.episode !== undefined) confidence += 0.3;
-  if (data.season !== undefined) confidence += 0.1;
+  if (episode !== undefined) confidence += 0.3;
+  if (season !== undefined) confidence += 0.1;
   if (data.seriesTitle && data.title && data.seriesTitle !== data.title) confidence += 0.1;
-  result.confidence = Math.min(confidence, 1);
 
-  return result;
+  return {
+    ...base,
+    title,
+    episode,
+    season,
+    evidence: data.rawSnippet,
+    confidence: Math.min(confidence, 1),
+  };
 }
 
 function extractJsonLd(): ExtractedLd | null {
@@ -91,8 +108,8 @@ function flatten(parsed: unknown): Record<string, unknown>[] {
 function matchVideo(item: Record<string, unknown>): ExtractedLd | null {
   const types = normalizeTypes(item['@type']);
   if (types.length === 0) return null;
-  const isVideo = types.some((t) => VIDEO_TYPES.has(t));
-  if (!isVideo) return null;
+  const isMedia = types.some((t) => MEDIA_TYPES.has(t));
+  if (!isMedia) return null;
 
   const partOfSeries = item['partOfSeries'] as Record<string, unknown> | undefined;
   const partOfSeason = item['partOfSeason'] as Record<string, unknown> | undefined;
@@ -105,9 +122,10 @@ function matchVideo(item: Record<string, unknown>): ExtractedLd | null {
     title: itemName,
   };
 
-  const epNum = item.episodeNumber;
-  if (typeof epNum === 'number' && Number.isFinite(epNum)) out.episode = epNum;
-  else if (typeof epNum === 'string' && /^\d+$/.test(epNum)) out.episode = Number(epNum);
+  const epNum = item.episodeNumber ?? item.issueNumber ?? item.chapterNumber ?? item.position;
+  if (typeof epNum === 'number' && Number.isFinite(epNum)) out.episode = Math.floor(epNum);
+  else if (typeof epNum === 'string' && /^\d+(?:\.\d+)?$/.test(epNum))
+    out.episode = Math.floor(Number(epNum));
 
   const seasonNum = partOfSeason?.seasonNumber;
   if (typeof seasonNum === 'number' && Number.isFinite(seasonNum)) out.season = seasonNum;

@@ -33,6 +33,9 @@ const NOISE_START_PATTERNS = [
   // Saison N / Season N / S1E2 / S01 — exigent un nombre
   /\b(?:saison|season)\s*\d+/i,
   /\b(?:épisode|episode|ep)\.?\s*\d+/i,
+  /\b(?:chapter|chapitre|chap)\.?\s*\d+(?:\.\d+)?/i,
+  /\bch\.\s*\d+(?:\.\d+)?/i,
+  /\bvol(?:ume|\.)?\s*\d+/i,
   /\bs\d{1,2}(?:e\d{1,4})?\b/i,
   // Mots-clés langue/qualité/streaming — assez spécifiques pour couper sans nombre
   /\b(?:vostfr|vost|vf|vostfr-vf|sub|subbed|dub|dubbed)\b/i,
@@ -47,6 +50,13 @@ const SEO_PREFIXES = /^(?:Regarder|Voir|Watch|Lire|Read)\s+(?:gratuitement\s+|en
  * fragment du titre.
  */
 const SITE_SUFFIX = /\s*[\-|·•–—]\s*[A-Za-z0-9.][^\-|·•–—]{0,30}\s*$/u;
+
+/**
+ * Mots de bruit SEO que les sites collent en fin de titre (« X Manga »,
+ * « Y Online », « Z Free »…). Retiré itérativement tant qu'il reste assez
+ * de mots avant.
+ */
+const TRAILING_NOISE = /\s+(?:manga|manhwa|manhua|webtoon|webcomic|anime|comic|novel|online|free|read|gratuit|gratuitement)\s*[,.]?\s*$/i;
 
 export function cleanScrapedTitle(raw: string): string {
   let t = raw.trim();
@@ -77,10 +87,17 @@ export function cleanScrapedTitle(raw: string): string {
   // sinon le segment résiduel est probablement le vrai titre déjà propre).
   const beforeSiteCut = t;
   const cut = t.replace(SITE_SUFFIX, '').trim();
-  // Ne coupe que si le résultat reste raisonnablement long (évite de tout
-  // grignoter sur un titre court type « Naruto »)
   if (cut.length >= 3 && cut.length >= beforeSiteCut.length * 0.5) {
     t = cut;
+  }
+
+  // Pass 4 — strip itératif des suffixes SEO/catégorisation
+  // (« Manga Online », « Manhwa Free »…) tant qu'il reste ≥ 2 mots avant.
+  for (let i = 0; i < 4; i++) {
+    const stripped = t.replace(TRAILING_NOISE, '').trim();
+    if (stripped === t) break;
+    if (!stripped || stripped.split(/\s+/).length < 2) break;
+    t = stripped;
   }
 
   return t.trim();

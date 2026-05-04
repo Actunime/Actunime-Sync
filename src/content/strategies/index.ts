@@ -5,6 +5,7 @@
  */
 
 import type { StrategyResult } from '@/shared/messaging';
+import { runDocumentTitleStrategy } from './document-title';
 import { runDomSelectorsStrategy } from './dom-selectors';
 import { runJsonLdStrategy } from './jsonld';
 import { runOgStrategy } from './og';
@@ -15,9 +16,16 @@ export function runAllStrategies(): StrategyResult[] {
     runJsonLdStrategy(),
     runOgStrategy(),
     runUrlTokensStrategy(),
+    runDocumentTitleStrategy(),
     runDomSelectorsStrategy(),
   ];
 }
 
-export { runJsonLdStrategy, runOgStrategy, runUrlTokensStrategy, runDomSelectorsStrategy };
+export {
+  runJsonLdStrategy,
+  runOgStrategy,
+  runUrlTokensStrategy,
+  runDocumentTitleStrategy,
+  runDomSelectorsStrategy,
+};
 export { deriveEpisodeUrlRegex } from './url-tokens';

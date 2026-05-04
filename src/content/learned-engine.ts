@@ -8,6 +8,7 @@
 import type { LearnedPattern, NumericSelector } from '@/shared/types';
 import type { DetectionResult } from './detection';
 import {
+  runDocumentTitleStrategy,
   runDomSelectorsStrategy,
   runJsonLdStrategy,
   runOgStrategy,
@@ -27,45 +28,60 @@ export function applyLearnedPattern(pattern: LearnedPattern): DetectionResult | 
     }
   }
 
+  const isManga = pattern.kind === 'manga';
   let title: string | undefined;
   let episode: number | undefined;
+  let chapter: number | undefined;
   let season: number | undefined;
+
+  const assignNumber = (value: number | undefined) => {
+    if (value === undefined) return;
+    if (isManga) chapter = value;
+    else episode = value;
+  };
 
   switch (pattern.strategy) {
     case 'jsonld': {
       const r = runJsonLdStrategy();
       title = r.title;
-      episode = r.episode;
-      season = r.season;
+      assignNumber(r.episode);
+      if (!isManga) season = r.season;
       break;
     }
     case 'og': {
       const r = runOgStrategy();
       title = r.title;
-      episode = r.episode;
-      season = r.season;
+      assignNumber(r.episode);
+      if (!isManga) season = r.season;
       break;
     }
     case 'url-tokens': {
       const r = runUrlTokensStrategy();
       title = r.title;
-      episode = r.episode;
-      season = r.season;
+      assignNumber(r.episode);
+      if (!isManga) season = r.season;
+      break;
+    }
+    case 'document-title': {
+      const r = runDocumentTitleStrategy();
+      title = r.title;
+      assignNumber(r.episode);
+      if (!isManga) season = r.season;
       break;
     }
     case 'dom-selectors': {
       const r = runDomSelectorsStrategy();
       title = r.title;
-      episode = r.episode;
-      season = r.season;
+      assignNumber(r.episode);
+      if (!isManga) season = r.season;
       break;
     }
     case 'manual': {
       const sel = pattern.manualSelectors;
       if (sel) {
         title = readText(sel.title);
-        if (sel.episode) episode = readNumericSelector(sel.episode);
-        if (sel.season) season = readNumericSelector(sel.season);
+        if (sel.episode) assignNumber(readNumericSelector(sel.episode));
+        if (sel.season && !isManga) season = readNumericSelector(sel.season);
       }
       break;
     }
@@ -73,7 +89,18 @@ export function applyLearnedPattern(pattern: LearnedPattern): DetectionResult | 
 
   if (!title) return null;
 
-  // slug propre depuis le titre — sert de clé de cache stable
+  if (isManga) {
+    const urlChapter = extractChapterFromUrl();
+    if (urlChapter !== undefined) {
+      chapter = urlChapter;
+    }
+  } else {
+    const urlEpisode = extractEpisodeFromUrl();
+    if (urlEpisode !== undefined) {
+      episode = urlEpisode;
+    }
+  }
+
   const seriesSlug = slugify(title);
 
   return {
@@ -82,10 +109,27 @@ export function applyLearnedPattern(pattern: LearnedPattern): DetectionResult | 
     url: location.href,
     title,
     episode,
+    chapter,
     season,
     seriesSlug: seriesSlug || undefined,
     slug: seriesSlug || undefined,
   };
+}
+
+function extractChapterFromUrl(): number | undefined {
+  const m = /\/(?:chapter|chapitre|ch)[-_/]?(\d+(?:\.\d+)?)\b/i.exec(location.pathname);
+  if (!m) return undefined;
+  const n = Math.floor(Number(m[1]));
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+function extractEpisodeFromUrl(): number | undefined {
+  const m =
+    /\/(?:episode|épisode|ep)[-_/]?(\d{1,4})\b/i.exec(location.pathname) ??
+    /[/-]s\d{1,2}e(\d{1,4})\b/i.exec(location.pathname);
+  if (!m) return undefined;
+  const n = Number(m[1]);
+  return Number.isFinite(n) && n > 0 && n < 9999 ? n : undefined;
 }
 
 function readText(selector: string): string | undefined {

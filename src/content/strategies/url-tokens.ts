@@ -63,6 +63,24 @@ const PATTERNS: Array<{ name: string; re: RegExp; map: (m: RegExpExecArray) => U
     map: (m) => ({ slug: m[1], episode: Number(m[2]), matchedPattern: '/{slug}/episode/N' }),
   },
   {
+    name: '/{slug}/.../chapter-N',
+    re: /\/([a-z0-9][a-z0-9-]+?)(?:\.[a-z0-9]+)?(?:\/[a-z]{2})?\/(?:chapter|chapitre|ch)[-_/]?(\d{1,5}(?:\.\d+)?)/i,
+    map: (m) => ({
+      slug: m[1],
+      episode: Math.floor(Number(m[2])),
+      matchedPattern: '/{slug}/chapter-N',
+    }),
+  },
+  {
+    name: '/{slug}-chapter-N',
+    re: /\/([a-z0-9][a-z0-9-]+?)-(?:chapter|chapitre|ch)-?(\d{1,5}(?:\.\d+)?)/i,
+    map: (m) => ({
+      slug: m[1],
+      episode: Math.floor(Number(m[2])),
+      matchedPattern: '/{slug}-chapter-N',
+    }),
+  },
+  {
     name: '/watch/{id}/{slug}',
     re: /\/watch\/([^/]+)\/([^/?#]+)/i,
     map: (m) => ({ slug: m[2], matchedPattern: '/watch/{id}/{slug}' }),
@@ -118,12 +136,15 @@ export function runUrlTokensStrategy(): StrategyResult {
  */
 function slugToTitle(slug: string, episode?: number): string | undefined {
   if (!slug) return undefined;
-  let cleaned = slug;
+  let cleaned = slug.replace(/\.[a-z0-9]+$/i, '');
   if (episode !== undefined) {
-    cleaned = cleaned.replace(new RegExp(`-?(?:episode-|ep-|e)?${episode}$`, 'i'), '');
+    cleaned = cleaned.replace(
+      new RegExp(`-?(?:episode-|ep-|e|chapter-|chapitre-|ch-?)?${episode}$`, 'i'),
+      '',
+    );
   }
   cleaned = cleaned
-    .replace(/-(?:episode|ep|épisode)[-.]?\d+.*$/i, '')
+    .replace(/-(?:episode|ep|épisode|chapter|chapitre|ch)[-.]?\d+.*$/i, '')
     .replace(/-e\d+.*$/i, '')
     .replace(/-s\d+.*$/i, '');
   const out = cleaned.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).trim();

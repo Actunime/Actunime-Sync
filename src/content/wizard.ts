@@ -11,7 +11,13 @@
  * Sortie : `Promise<LearnedPattern | null>` (null = user a annulé).
  */
 
-import type { LearnedPattern, NumericSelector, StrategyId } from '@/shared/types';
+import type {
+  LearnedPattern,
+  MangaTrackingConfig,
+  MangaTrackingMode,
+  NumericSelector,
+  StrategyId,
+} from '@/shared/types';
 import type { StrategyResult } from '@/shared/messaging';
 import { sendMessage } from '@/shared/messaging';
 import { parseLearnedPatternsExport } from '@/shared/learned-patterns-io';
@@ -49,11 +55,13 @@ interface PendingTokenChoice {
 }
 
 interface WizardState {
-  step: 'welcome' | 'results' | 'manual' | 'manual-token' | 'confirm';
+  step: 'welcome' | 'results' | 'manual' | 'manual-token' | 'tracking-manga' | 'confirm';
+  kind: 'anime' | 'manga';
   results: StrategyResult[];
   chosenStrategy?: StrategyId;
   manual: ManualSelection;
   pendingToken?: PendingTokenChoice;
+  mangaTracking?: MangaTrackingConfig;
 }
 
 /**
@@ -69,8 +77,10 @@ export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Pro
 
     const state: WizardState = {
       step: 'welcome',
+      kind: opts.kind,
       results: [],
       manual: {},
+      mangaTracking: opts.kind === 'manga' ? { mode: 'manual' } : undefined,
     };
 
     let resolved = false;
@@ -85,27 +95,51 @@ export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Pro
     shadow.innerHTML = renderShell();
     document.documentElement.appendChild(host);
 
+    const updateKindToggle = () => {
+      shadow.querySelectorAll<HTMLButtonElement>('.kind-toggle button').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.kind === state.kind);
+      });
+    };
+    updateKindToggle();
+    shadow.querySelectorAll<HTMLButtonElement>('.kind-toggle button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = btn.dataset.kind as 'anime' | 'manga' | undefined;
+        if (!next || next === state.kind) return;
+        state.kind = next;
+        if (next === 'manga' && !state.mangaTracking) {
+          state.mangaTracking = { mode: 'manual' };
+        } else if (next === 'anime') {
+          state.mangaTracking = undefined;
+        }
+        updateKindToggle();
+      });
+    });
+
     const render = () => {
       const root = shadow.querySelector('#wiz-content');
       if (!root) return;
       switch (state.step) {
         case 'welcome':
-          root.innerHTML = renderWelcome();
+          root.innerHTML = renderWelcome(state.kind);
           wireWelcome();
           break;
         case 'results':
-          root.innerHTML = renderResults(state.results);
+          root.innerHTML = renderResults(state.results, state.kind);
           wireResults();
           break;
         case 'manual':
-          root.innerHTML = renderManual(state.manual);
+          root.innerHTML = renderManual(state.manual, state.kind);
           wireManual();
           break;
         case 'manual-token':
           if (state.pendingToken) {
-            root.innerHTML = renderTokenChoice(state.pendingToken);
+            root.innerHTML = renderTokenChoice(state.pendingToken, state.kind);
             wireTokenChoice();
           }
+          break;
+        case 'tracking-manga':
+          root.innerHTML = renderTrackingManga(state);
+          wireTrackingManga();
           break;
         case 'confirm':
           root.innerHTML = renderConfirm(state);
@@ -154,8 +188,7 @@ export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Pro
       });
       shadow.querySelector('#wiz-confirm-strategy')?.addEventListener('click', () => {
         if (!state.chosenStrategy) return;
-        // Stratégies auto → on saute directement au confirm
-        state.step = 'confirm';
+        state.step = state.kind === 'manga' ? 'tracking-manga' : 'confirm';
         render();
       });
       shadow.querySelector('#wiz-go-manual')?.addEventListener('click', () => {
@@ -198,7 +231,7 @@ export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Pro
       });
       shadow.querySelector('#wiz-manual-validate')?.addEventListener('click', () => {
         if (!state.manual.title || !state.manual.episode) return;
-        state.step = 'confirm';
+        state.step = state.kind === 'manga' ? 'tracking-manga' : 'confirm';
         render();
       });
       shadow.querySelector('#wiz-back-results')?.addEventListener('click', () => {
@@ -236,6 +269,81 @@ export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Pro
       });
     };
 
+    const wireTrackingManga = () => {
+      const setMode = (mode: MangaTrackingMode) => {
+        if (mode === 'scroll') {
+          state.mangaTracking = { mode, threshold: 0.9 };
+        } else if (mode === 'manual') {
+          state.mangaTracking = { mode };
+        } else {
+          const existing =
+            state.mangaTracking?.mode === mode ? state.mangaTracking : undefined;
+          state.mangaTracking = { mode, selector: existing?.selector };
+        }
+        render();
+      };
+
+      shadow.querySelectorAll<HTMLElement>('[data-tracking-mode]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const mode = el.dataset.trackingMode as MangaTrackingMode;
+          setMode(mode);
+        });
+      });
+
+      shadow.querySelector('#wiz-pick-counter')?.addEventListener('click', () => {
+        startSimplePick(
+          'Cliquez sur le compteur de page (ex. « 12 / 24 »).',
+          host,
+          (selector) => {
+            state.mangaTracking = { mode: 'page-counter', selector };
+            render();
+          },
+          () => render(),
+        );
+      });
+
+      shadow.querySelector('#wiz-pick-scroll-container')?.addEventListener('click', () => {
+        startSimplePick(
+          'Cliquez sur la zone qui scrolle (le conteneur du lecteur).',
+          host,
+          (selector) => {
+            state.mangaTracking = { mode: 'scroll', threshold: 0.9, selector };
+            render();
+          },
+          () => render(),
+        );
+      });
+      shadow.querySelector('#wiz-clear-scroll-container')?.addEventListener('click', () => {
+        state.mangaTracking = { mode: 'scroll', threshold: 0.9 };
+        render();
+      });
+
+      shadow.querySelector('#wiz-pick-next')?.addEventListener('click', () => {
+        startSimplePick(
+          'Cliquez sur le bouton « chapitre suivant ».',
+          host,
+          (selector) => {
+            state.mangaTracking = { mode: 'next-button', selector };
+            render();
+          },
+          () => render(),
+        );
+      });
+
+      shadow.querySelector('#wiz-tracking-back')?.addEventListener('click', () => {
+        state.step = state.chosenStrategy === 'manual' ? 'manual' : 'results';
+        render();
+      });
+      shadow.querySelector('#wiz-tracking-next')?.addEventListener('click', () => {
+        if (!state.mangaTracking) state.mangaTracking = { mode: 'manual' };
+        const m = state.mangaTracking;
+        if ((m.mode === 'page-counter' || m.mode === 'next-button') && !m.selector) return;
+        state.step = 'confirm';
+        render();
+      });
+      shadow.querySelector('#wiz-cancel')?.addEventListener('click', () => finish(null));
+    };
+
     const wireConfirm = () => {
       shadow.querySelector('#wiz-save')?.addEventListener('click', async () => {
         const btn = shadow.querySelector<HTMLButtonElement>('#wiz-save');
@@ -243,7 +351,7 @@ export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Pro
           btn.disabled = true;
           btn.textContent = '…';
         }
-        const pattern = buildPattern(state, opts.kind);
+        const pattern = buildPattern(state, state.kind);
         const res = (await sendMessage({
           type: 'SAVE_LEARNED_PATTERN',
           payload: { pattern },
@@ -260,7 +368,11 @@ export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Pro
         finish(pattern);
       });
       shadow.querySelector('#wiz-back')?.addEventListener('click', () => {
-        state.step = state.chosenStrategy === 'manual' ? 'manual' : 'results';
+        if (state.kind === 'manga') {
+          state.step = 'tracking-manga';
+        } else {
+          state.step = state.chosenStrategy === 'manual' ? 'manual' : 'results';
+        }
         render();
       });
       shadow.querySelector('#wiz-cancel')?.addEventListener('click', () => finish(null));
@@ -296,6 +408,7 @@ function buildPattern(state: WizardState, kind: 'anime' | 'manga'): LearnedPatte
   const now = new Date().toISOString();
   const host = location.hostname;
   const episodeUrlRegex = deriveEpisodeUrlRegex(location.pathname);
+  const mangaTracking = kind === 'manga' ? state.mangaTracking : undefined;
 
   if (state.chosenStrategy === 'manual') {
     const episode: NumericSelector | undefined = state.manual.episode
@@ -312,6 +425,7 @@ function buildPattern(state: WizardState, kind: 'anime' | 'manga'): LearnedPatte
         ? { title: state.manual.title, episode, season }
         : undefined,
       episodeUrlRegex,
+      mangaTracking,
       createdAt: now,
       updatedAt: now,
     };
@@ -321,6 +435,7 @@ function buildPattern(state: WizardState, kind: 'anime' | 'manga'): LearnedPatte
     kind,
     strategy: (state.chosenStrategy ?? 'jsonld') as StrategyId,
     episodeUrlRegex,
+    mangaTracking,
     createdAt: now,
     updatedAt: now,
   };
@@ -350,7 +465,15 @@ function startPick(
   // Cache le wizard pendant le pick (l'user doit voir la page)
   wizardHost.style.display = 'none';
 
-  const fieldLabel = field === 'title' ? 'le titre' : field === 'episode' ? 'le numéro d\'épisode' : 'le numéro de saison';
+  const isManga = state.kind === 'manga';
+  const fieldLabel =
+    field === 'title'
+      ? 'le titre'
+      : field === 'episode'
+        ? isManga
+          ? 'le numéro de chapitre'
+          : "le numéro d'épisode"
+        : 'le numéro de saison';
 
   const highlight = document.createElement('div');
   highlight.style.cssText = `
@@ -504,6 +627,84 @@ function cleanupPick() {
   pickCtx = null;
 }
 
+function startSimplePick(
+  prompt: string,
+  wizardHost: HTMLElement,
+  onPicked: (selector: string, text: string) => void,
+  onCancel: () => void,
+): void {
+  cleanupPick();
+  wizardHost.style.display = 'none';
+
+  const highlight = document.createElement('div');
+  highlight.id = PICK_OVERLAY_ID;
+  highlight.style.cssText = `position:fixed;pointer-events:none;z-index:2147483646;border:2px solid oklch(66.906% 0.18376 248.826);background:oklch(66.906% 0.18376 248.826/0.15);border-radius:3px;transition:all 50ms ease-out;`;
+  document.documentElement.appendChild(highlight);
+
+  const toolbar = document.createElement('div');
+  toolbar.id = PICK_OVERLAY_ID + '-toolbar';
+  toolbar.style.cssText = `position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#030a1d;color:#fafafa;border:1px solid rgba(60,90,166,0.4);border-radius:8px;padding:10px 14px;font-family:${FONT_STACK};font-size:13px;box-shadow:0 12px 32px rgba(0,0,0,0.6);display:flex;align-items:center;gap:12px;`;
+  toolbar.innerHTML = `
+    <span style="font-size:11px;padding:2px 8px;background:oklch(66.906% 0.18376 248.826);color:#030a1d;border-radius:4px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;">Sélection</span>
+    <span>${escapeHtml(prompt)}</span>
+    <button id="wiz-simple-pick-cancel" style="margin-left:8px;padding:4px 10px;background:rgba(255,255,255,0.06);color:#fafafa;border:1px solid rgba(255,255,255,0.12);border-radius:4px;font-size:11px;cursor:pointer;font-family:${FONT_STACK};">Annuler (Esc)</button>
+  `;
+  document.documentElement.appendChild(toolbar);
+
+  const restore = () => {
+    cleanupPick();
+    wizardHost.style.display = 'flex';
+  };
+
+  toolbar.querySelector<HTMLButtonElement>('#wiz-simple-pick-cancel')?.addEventListener('click', () => {
+    restore();
+    onCancel();
+  });
+
+  const onMove = (e: MouseEvent) => {
+    const target = elementFromPointSkipOverlay(e.clientX, e.clientY);
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    highlight.style.left = `${rect.left}px`;
+    highlight.style.top = `${rect.top}px`;
+    highlight.style.width = `${rect.width}px`;
+    highlight.style.height = `${rect.height}px`;
+  };
+
+  const onClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    e.stopPropagation();
+    const target = elementFromPointSkipOverlay(e.clientX, e.clientY);
+    if (!target) return;
+    const selector = generateSelector(target);
+    const text = (target.textContent?.trim() ?? '').slice(0, 200);
+    restore();
+    onPicked(selector, text);
+  };
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      restore();
+      onCancel();
+    }
+  };
+
+  document.addEventListener('mousemove', onMove, true);
+  document.addEventListener('click', onClick, true);
+  document.addEventListener('keydown', onKey, true);
+
+  pickCtx = {
+    field: 'title',
+    highlightEl: highlight,
+    toolbarEl: toolbar,
+    onMove,
+    onClick,
+    onKey,
+    prevPointerEvents: '',
+  };
+}
+
 /**
  * `document.elementFromPoint` peut tomber sur le highlight overlay lui-même —
  * on l'ignore pour ne renvoyer que des éléments « réels » de la page.
@@ -648,6 +849,32 @@ function renderShell(): string {
         font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
       }
       .header h2 { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
+      .kind-toggle {
+        display: flex;
+        gap: 0;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        padding: 2px;
+      }
+      .kind-toggle button {
+        background: transparent;
+        border: none;
+        color: oklch(86.989% 0.06369 262.465);
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-family: ${FONT_STACK};
+        transition: background 120ms, color 120ms;
+      }
+      .kind-toggle button.active {
+        background: oklch(66.906% 0.18376 248.826);
+        color: #030a1d;
+        font-weight: 600;
+      }
+      .kind-toggle button:not(.active):hover { color: oklch(0.985 0.002 247.839); }
       .header .close {
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.06);
@@ -803,6 +1030,10 @@ function renderShell(): string {
         <div class="header">
           <span class="badge">Actunime</span>
           <h2>Configurer la détection sur ce site</h2>
+          <div class="kind-toggle" role="tablist" aria-label="Type de contenu">
+            <button type="button" data-kind="anime" id="wiz-kind-anime" role="tab">Anime</button>
+            <button type="button" data-kind="manga" id="wiz-kind-manga" role="tab">Manga</button>
+          </div>
           <button class="close" id="wiz-cancel" aria-label="Fermer">×</button>
         </div>
         <div class="body" id="wiz-content"></div>
@@ -811,11 +1042,14 @@ function renderShell(): string {
   `;
 }
 
-function renderWelcome(): string {
+function renderWelcome(kind: 'anime' | 'manga'): string {
+  const isManga = kind === 'manga';
+  const pageWord = isManga ? 'chapitre' : 'épisode';
+  const numberWord = isManga ? 'numéro de chapitre' : "numéro d'épisode";
   return `
     <h3>Pour bien configurer ce site…</h3>
-    <p>Ouvre une page d'épisode (pas la home, pas la fiche série) puis clique <strong>Analyser cette page</strong>.
-    L'extension va tester 4 stratégies pour trouver le titre et le numéro d'épisode automatiquement.</p>
+    <p>Ouvre une page de ${pageWord} (pas la home, pas la fiche série) puis clique <strong>Analyser cette page</strong>.
+    L'extension va tester 4 stratégies pour trouver le titre et le ${numberWord} automatiquement.</p>
     <p class="small muted">Si aucune ne marche, tu pourras configurer manuellement en pointant les éléments du DOM. Tu peux aussi importer un pattern partagé par un autre utilisateur.</p>
     <div id="wiz-import-status" class="save-status"></div>
     <input type="file" id="wiz-import-file" accept=".json,application/json" style="display:none" />
@@ -894,11 +1128,14 @@ function confidenceLabel(c: number): string {
   return 'faible';
 }
 
-function renderResults(results: StrategyResult[]): string {
+function renderResults(results: StrategyResult[], kind: 'anime' | 'manga'): string {
+  const isManga = kind === 'manga';
+  const numberWord = isManga ? 'Chapitre' : 'Épisode';
+  const numberWordLow = isManga ? 'chapitre' : 'épisode';
+  const numberMissingMsg = isManga ? 'Numéro de chapitre manquant' : "Numéro d'épisode manquant";
+
   const list = results
     .map((r) => {
-      // Une stratégie est utilisable seulement si elle a trouvé titre + épisode.
-      // Saison reste optionnelle.
       const usable = !!(r.title && r.episode !== undefined);
       const cls = confidenceClass(r.confidence);
       const label = confidenceLabel(r.confidence);
@@ -918,7 +1155,7 @@ function renderResults(results: StrategyResult[]): string {
       const reasonHtml = usable
         ? ''
         : `<div class="strategy-blocked">⊘ ${escapeHtml(
-            r.title ? "Numéro d'épisode manquant" : 'Titre manquant',
+            r.title ? numberMissingMsg : 'Titre manquant',
           )} — stratégie inutilisable</div>`;
 
       return `
@@ -932,8 +1169,8 @@ function renderResults(results: StrategyResult[]): string {
           </div>
           <div class="extracted">
             <span class="key">Titre</span>${titleVal}
-            <span class="key">Épisode</span>${epVal}
-            <span class="key">Saison</span>${seasonVal}
+            <span class="key">${numberWord}</span>${epVal}
+            ${isManga ? '' : `<span class="key">Saison</span>${seasonVal}`}
           </div>
           ${reasonHtml}
           ${evidence}
@@ -944,7 +1181,7 @@ function renderResults(results: StrategyResult[]): string {
 
   return `
     <h3>Choisis la stratégie qui a trouvé les bonnes valeurs</h3>
-    <p class="small">L'extension a besoin du <strong>titre</strong> et du <strong>numéro d'épisode</strong>. Les stratégies qui n'ont trouvé que l'un ou l'autre sont désactivées.</p>
+    <p class="small">L'extension a besoin du <strong>titre</strong> et du <strong>numéro de ${numberWordLow}</strong>. Les stratégies qui n'ont trouvé que l'un ou l'autre sont désactivées.</p>
     <style>
       .strategy-blocked {
         margin-top: 8px;
@@ -992,7 +1229,7 @@ function renderResults(results: StrategyResult[]): string {
     <div class="strategy-manual" id="wiz-go-manual" role="button" tabindex="0">
       <div>
         <div class="manual-title">Aucune ne marche ? Configurer manuellement</div>
-        <div class="manual-desc">Pointe toi-même le titre et le numéro d'épisode dans la page.</div>
+        <div class="manual-desc">Pointe toi-même le titre et le numéro de ${numberWordLow} dans la page.</div>
       </div>
       <span class="manual-arrow">→</span>
     </div>
@@ -1005,7 +1242,11 @@ function renderResults(results: StrategyResult[]): string {
   `;
 }
 
-function renderManual(manual: ManualSelection): string {
+function renderManual(manual: ManualSelection, kind: 'anime' | 'manga'): string {
+  const isManga = kind === 'manga';
+  const numberLabel = isManga ? 'Chapitre' : 'Épisode';
+  const numberLow = isManga ? 'chapitre' : 'épisode';
+
   const fieldRow = (
     field: PickField,
     selector: string | undefined,
@@ -1035,8 +1276,8 @@ function renderManual(manual: ManualSelection): string {
     <p class="small">Clique <strong>Pointer</strong>, puis clique sur l'élément correspondant dans la page.
     Le wizard se cache pendant la sélection. Esc annule.</p>
     ${fieldRow('title', manual.title, manual.titleText, 'Titre', true)}
-    ${fieldRow('episode', manual.episode, manual.episodeText, 'Épisode', true)}
-    <p class="small muted">Le titre <strong>et</strong> l'épisode sont obligatoires pour que le tracking fonctionne.</p>
+    ${fieldRow('episode', manual.episode, manual.episodeText, numberLabel, true)}
+    <p class="small muted">Le titre <strong>et</strong> le ${numberLow} sont obligatoires pour que le tracking fonctionne.</p>
     <div class="footer" style="margin: 18px -20px 0;">
       <button class="btn ghost" id="wiz-back-results">Retour aux stratégies</button>
       <div class="right">
@@ -1052,8 +1293,14 @@ function renderManual(manual: ManualSelection): string {
  * On rend le textContent avec chaque nombre cliquable inline pour que l'user
  * pointe précisément le bon (« Witch Hat - [03] VOSTFR - [03] »).
  */
-function renderTokenChoice(pending: PendingTokenChoice): string {
-  const fieldLabel = pending.field === 'episode' ? "le numéro d'épisode" : 'le numéro de saison';
+function renderTokenChoice(pending: PendingTokenChoice, kind: 'anime' | 'manga'): string {
+  const isManga = kind === 'manga';
+  const fieldLabel =
+    pending.field === 'episode'
+      ? isManga
+        ? 'le numéro de chapitre'
+        : "le numéro d'épisode"
+      : 'le numéro de saison';
 
   // Construit un rendu HTML : alterne text statique et boutons cliquables sur
   // chaque match. On utilise `String.prototype.matchAll` avec /\d+/g pour
@@ -1118,7 +1365,61 @@ function renderTokenChoice(pending: PendingTokenChoice): string {
   `;
 }
 
+function renderTrackingManga(state: WizardState): string {
+  const tracking = state.mangaTracking ?? { mode: 'manual' as MangaTrackingMode };
+  const isMode = (m: MangaTrackingMode) => tracking.mode === m;
+
+  const card = (mode: MangaTrackingMode, title: string, desc: string, hint?: string) => `
+    <div class="strategy ${isMode(mode) ? 'selected' : ''}" data-tracking-mode="${mode}">
+      <div class="strategy-header">
+        <div>
+          <div class="strategy-label">${escapeHtml(title)}</div>
+          <div class="strategy-desc">${escapeHtml(desc)}</div>
+        </div>
+      </div>
+      ${hint ? `<div class="extracted"><span class="key">Sélecteur</span><span class="val">${escapeHtml(hint)}</span></div>` : ''}
+    </div>
+  `;
+
+  const needsSelector =
+    (tracking.mode === 'page-counter' || tracking.mode === 'next-button') && !tracking.selector;
+
+  const pickRow =
+    tracking.mode === 'page-counter'
+      ? `<button class="btn primary" id="wiz-pick-counter" type="button">${tracking.selector ? 'Re-pointer le compteur' : 'Pointer le compteur (X / Y)'}</button>`
+      : tracking.mode === 'next-button'
+        ? `<button class="btn primary" id="wiz-pick-next" type="button">${tracking.selector ? 'Re-pointer le bouton' : 'Pointer le bouton « chapitre suivant »'}</button>`
+        : '';
+
+  return `
+    <h3>Comment marquer un chapitre comme lu ?</h3>
+    <p class="small">Choisis le mode qui correspond à la lecture sur ce site. Tu pourras toujours marquer manuellement depuis le popup.</p>
+    <div class="strategy-list">
+      ${card('manual', 'Manuel', 'Aucun déclencheur automatique. Tu cliques « Marquer chapitre lu » dans le popup quand tu as fini.')}
+      ${card('scroll', 'Défilement', 'Marqué automatiquement quand tu as scrollé > 90 % du lecteur. Auto-détection du conteneur scrollable.', tracking.mode === 'scroll' ? tracking.selector : undefined)}
+      ${card('page-counter', 'Compteur de page', 'Lit un compteur dans le DOM (ex. « 12 / 24 ») et marque lu quand la dernière page est atteinte.', tracking.mode === 'page-counter' ? tracking.selector : undefined)}
+      ${card('next-button', 'Bouton « chapitre suivant »', 'Marque lu au clic sur un bouton de navigation que tu désignes.', tracking.mode === 'next-button' ? tracking.selector : undefined)}
+    </div>
+    ${tracking.mode === 'scroll' ? `
+      <p class="small muted" style="margin-top: 10px;">Sur les sites en mode « application » où la page entière ne scrolle pas, pointe le conteneur du lecteur (optionnel — l'auto-détection essaiera sinon).</p>
+      <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn ${tracking.selector ? 'secondary' : 'primary'}" id="wiz-pick-scroll-container" type="button">${tracking.selector ? 'Re-pointer le conteneur' : 'Pointer le conteneur scrollable (optionnel)'}</button>
+        ${tracking.selector ? `<button class="btn ghost" id="wiz-clear-scroll-container" type="button">Auto-détecter</button>` : ''}
+      </div>
+    ` : ''}
+    ${pickRow ? `<div style="margin-top:12px;display:flex;gap:8px;">${pickRow}</div>` : ''}
+    <div class="footer" style="margin: 18px -20px 0;">
+      <button class="btn secondary" id="wiz-tracking-back" type="button">Retour</button>
+      <div class="right">
+        <button class="btn primary" id="wiz-tracking-next" type="button" ${needsSelector ? 'disabled' : ''}>Continuer</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderConfirm(state: WizardState): string {
+  const isManga = state.kind === 'manga';
+  const numberLabel = isManga ? 'Chapitre' : 'Épisode';
   let summary = '';
 
   if (state.chosenStrategy === 'manual') {
@@ -1126,8 +1427,8 @@ function renderConfirm(state: WizardState): string {
       <div class="extracted">
         <span class="key">Stratégie</span><span class="val">Manuelle (sélecteurs CSS)</span>
         <span class="key">Titre</span><span class="val">${escapeHtml(state.manual.titleText ?? '')}</span>
-        ${state.manual.episode ? `<span class="key">Épisode</span><span class="val">${escapeHtml(state.manual.episodeText ?? '')}</span>` : ''}
-        ${state.manual.season ? `<span class="key">Saison</span><span class="val">${escapeHtml(state.manual.seasonText ?? '')}</span>` : ''}
+        ${state.manual.episode ? `<span class="key">${numberLabel}</span><span class="val">${escapeHtml(state.manual.episodeText ?? '')}</span>` : ''}
+        ${!isManga && state.manual.season ? `<span class="key">Saison</span><span class="val">${escapeHtml(state.manual.seasonText ?? '')}</span>` : ''}
       </div>
     `;
   } else {
@@ -1137,18 +1438,28 @@ function renderConfirm(state: WizardState): string {
         <div class="extracted">
           <span class="key">Stratégie</span><span class="val">${escapeHtml(r.label)}</span>
           <span class="key">Titre</span><span class="val">${escapeHtml(r.title ?? '—')}</span>
-          ${r.episode !== undefined ? `<span class="key">Épisode</span><span class="val">${escapeHtml(r.episode)}</span>` : ''}
-          ${r.season !== undefined ? `<span class="key">Saison</span><span class="val">${escapeHtml(r.season)}</span>` : ''}
+          ${r.episode !== undefined ? `<span class="key">${numberLabel}</span><span class="val">${escapeHtml(r.episode)}</span>` : ''}
+          ${!isManga && r.season !== undefined ? `<span class="key">Saison</span><span class="val">${escapeHtml(r.season)}</span>` : ''}
         </div>
       `;
     }
   }
 
+  const trackingSummary =
+    state.kind === 'manga' && state.mangaTracking
+      ? `
+        <div class="extracted" style="margin-top:8px;">
+          <span class="key">Tracking</span><span class="val">${escapeHtml(trackingModeLabel(state.mangaTracking.mode))}</span>
+          ${state.mangaTracking.selector ? `<span class="key">Sélecteur</span><span class="val">${escapeHtml(state.mangaTracking.selector)}</span>` : ''}
+        </div>`
+      : '';
+
   return `
     <h3>Sauvegarder cette configuration ?</h3>
-    <p class="small">Le pattern sera utilisé sur <strong>${escapeHtml(location.hostname)}</strong> pour détecter automatiquement la série et l'épisode.
+    <p class="small">Le pattern sera utilisé sur <strong>${escapeHtml(location.hostname)}</strong> pour détecter automatiquement la série et ${state.kind === 'manga' ? 'le chapitre' : "l'épisode"}.
     Stocké uniquement dans ton navigateur — jamais transmis à Actunime.</p>
     ${summary}
+    ${trackingSummary}
     <p class="small muted" style="margin-top: 12px;">Tu peux le retirer ou le modifier à tout moment depuis les paramètres.</p>
     <div class="save-status" id="wiz-save-status"></div>
     <div class="footer" style="margin: 18px -20px 0;">
@@ -1159,4 +1470,17 @@ function renderConfirm(state: WizardState): string {
       </div>
     </div>
   `;
+}
+
+function trackingModeLabel(mode: MangaTrackingMode): string {
+  switch (mode) {
+    case 'manual':
+      return 'Manuel (bouton popup)';
+    case 'scroll':
+      return 'Défilement de la page';
+    case 'page-counter':
+      return 'Compteur de page (DOM)';
+    case 'next-button':
+      return 'Bouton « chapitre suivant »';
+  }
 }

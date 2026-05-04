@@ -8,6 +8,7 @@
 
 import type { StrategyResult } from '@/shared/messaging';
 import { parseEpisodeSeasonFromTitle } from './og';
+import { extractFromText } from './title-parser';
 import { cleanScrapedTitle } from '../title-cleanup';
 
 const TITLE_SELECTORS = [
@@ -87,6 +88,16 @@ export function runDomSelectorsStrategy(): StrategyResult {
     if (parsed.season !== undefined) season = parsed.season;
   }
   if (cleanedTitle) cleanedTitle = cleanScrapedTitle(cleanedTitle);
+
+  if (episode === undefined && title) {
+    const fallback = extractFromText(title);
+    if (fallback?.episode !== undefined) {
+      episode = fallback.episode;
+      if (fallback.season !== undefined && season === undefined) season = fallback.season;
+      if (fallback.title) cleanedTitle = fallback.title;
+      episodeSource = (episodeSource ?? '') + ' (parser titre)';
+    }
+  }
 
   if (!cleanedTitle) return { ...base, evidence: 'Aucun sélecteur DOM courant n\'a matché.' };
 

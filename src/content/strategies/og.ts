@@ -5,6 +5,7 @@
 
 import type { StrategyResult } from '@/shared/messaging';
 import { cleanScrapedTitle } from '../title-cleanup';
+import { extractFromText } from './title-parser';
 
 export function runOgStrategy(): StrategyResult {
   const base: StrategyResult = {
@@ -26,10 +27,17 @@ export function runOgStrategy(): StrategyResult {
     .filter(Boolean)
     .join('\n');
 
-  // Tente d'extraire « épisode N » / « saison N » du titre lui-même, puis
-  // nettoie le bruit résiduel (langue, qualité, suffixe site).
-  const { episode, season, cleanedTitle: parseStripped } = parseEpisodeSeasonFromTitle(ogTitle);
-  const cleanedTitle = parseStripped ? cleanScrapedTitle(parseStripped) : undefined;
+  let { episode, season, cleanedTitle: parseStripped } = parseEpisodeSeasonFromTitle(ogTitle);
+  let cleanedTitle = parseStripped ? cleanScrapedTitle(parseStripped) : undefined;
+
+  if (episode === undefined) {
+    const fallback = extractFromText(ogTitle);
+    if (fallback?.episode !== undefined) {
+      episode = fallback.episode;
+      if (fallback.season !== undefined && season === undefined) season = fallback.season;
+      if (fallback.title) cleanedTitle = fallback.title;
+    }
+  }
 
   let confidence = 0;
   if (cleanedTitle) confidence += 0.4;
