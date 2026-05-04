@@ -33,10 +33,20 @@ export default defineManifest(({ mode }) => {
 
   const isProd = mode === 'production';
 
+  const semverMatch = pkg.version.match(/^(\d+)\.(\d+)\.(\d+)(?:-[a-z]+\.(\d+))?/i);
+  if (!semverMatch) {
+    throw new Error(`Version package.json invalide : ${pkg.version}`);
+  }
+  const [, major, minor, patch, prerelease] = semverMatch;
+  const chromeVersion = prerelease
+    ? `${major}.${minor}.${patch}.${prerelease}`
+    : `${major}.${minor}.${patch}`;
+
   return {
     manifest_version: 3,
     name: isProd ? 'Actunime Sync' : `Actunime Sync (${mode})`,
-    version: pkg.version,
+    version: chromeVersion,
+    version_name: pkg.version,
     description: pkg.description,
     homepage_url: 'https://github.com/Actunime/Actunime-Sync',
     author: { email: 'contact@actunime.fr' },
@@ -66,7 +76,7 @@ export default defineManifest(({ mode }) => {
         matches: ['https://placeholder.actunime-sync.invalid/*'],
         js: ['src/content/main.ts'],
         run_at: 'document_idle',
-        all_frames: true,
+        all_frames: false,
       },
       {
         matches: markerMatches,
