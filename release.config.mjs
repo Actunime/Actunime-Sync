@@ -55,6 +55,12 @@ export default {
         },
       },
     ],
+    [
+      '@semantic-release/npm',
+      {
+        npmPublish: false,
+      },
+    ],
     '@semantic-release/changelog',
     [
       '@semantic-release/github',
@@ -75,7 +81,7 @@ export default {
     [
       '@semantic-release/git',
       {
-        assets: ['package.json', 'CHANGELOG.md', 'pnpm-lock.yaml', 'manifest.json'],
+        assets: ['package.json', 'CHANGELOG.md', 'pnpm-lock.yaml'],
         message: 'chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}',
       },
     ],
