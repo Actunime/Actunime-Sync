@@ -1,4 +1,4 @@
-const RELEASES_API = 'https://api.github.com/repos/Actunime/Actunime-Sync/releases/latest';
+const RELEASES_API = 'https://api.github.com/repos/Actunime/Actunime-Sync/releases?per_page=1';
 const UPDATE_ALARM = 'actunime-sync-update-check';
 const CHECK_PERIOD_MINUTES = 24 * 60;
 
@@ -31,9 +31,11 @@ export async function checkForUpdate(): Promise<void> {
       headers: { Accept: 'application/vnd.github+json' },
     });
     if (!res.ok) return;
-    const data = (await res.json()) as { tag_name?: string; html_url?: string };
-    const latest = data.tag_name;
-    const releaseUrl = data.html_url;
+    const data = (await res.json()) as Array<{ tag_name?: string; html_url?: string }>;
+    const top = data[0];
+    if (!top) return;
+    const latest = top.tag_name;
+    const releaseUrl = top.html_url;
     if (!latest) return;
     const current = chrome.runtime.getManifest().version;
     const available = compareVersions(latest, current) > 0;
