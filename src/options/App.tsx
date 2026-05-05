@@ -57,10 +57,10 @@ function LearnedPatternsSection() {
   const [removing, setRemoving] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const res = (await sendMessage({
+    const res: ListLearnedPatternsResultPayload = await sendMessage({
       type: 'LIST_LEARNED_PATTERNS',
-    })) as ListLearnedPatternsResultPayload;
-    setPatterns(res.patterns.sort((a, b) => (b.updatedAt < a.updatedAt ? -1 : 1)));
+    });
+    setPatterns(res.patterns.toSorted((a, b) => (b.updatedAt < a.updatedAt ? -1 : 1)));
   }, []);
 
   useEffect(() => {
@@ -126,7 +126,7 @@ function LearnedPatternsSection() {
         </div>
       )}
 
-      {patterns && patterns.length === 0 && (
+      {patterns?.length === 0 && (
         <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           Aucune configuration personnalisée. Sur un site supporté, ouvre le popup et clique «
           Configurer ce site » pour lancer l'assistant.
@@ -141,7 +141,7 @@ function LearnedPatternsSection() {
               className="flex items-center justify-between gap-3 rounded-md border border-border bg-card p-3"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Settings2 className="size-4 text-muted-foreground flex-shrink-0" />
+                <Settings2 className="size-4 text-muted-foreground shrink-0" />
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{p.host}</div>
                   <div className="text-xs text-muted-foreground">
@@ -150,7 +150,7 @@ function LearnedPatternsSection() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => handleExportSingle(p)}
                   title="Exporter ce site en JSON"
@@ -190,7 +190,7 @@ function downloadJson(content: string, filename: string) {
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  a.remove();
   // Libère l'URL après que le navigateur ait eu le temps de lancer le download
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -324,14 +324,14 @@ function ImportLearnedPatterns({
 
       {error && (
         <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2.5 text-xs text-destructive">
-          <AlertCircle className="size-3.5 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
         <div className="flex items-start gap-2 rounded-md border border-success/40 bg-success/5 p-2.5 text-xs text-success">
-          <Check className="size-3.5 flex-shrink-0 mt-0.5" />
+          <Check className="size-3.5 shrink-0 mt-0.5" />
           <span>{success}</span>
         </div>
       )}
@@ -345,7 +345,7 @@ function ImportLearnedPatterns({
           <ul className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-y-auto">
             {preview.diff.fresh.map((p) => (
               <li key={p.host} className="flex items-center gap-2">
-                <Check className="size-3 text-success flex-shrink-0" />
+                <Check className="size-3 text-success shrink-0" />
                 <span className="truncate">
                   <strong className="text-foreground">{p.host}</strong> — nouveau
                 </span>
@@ -353,7 +353,7 @@ function ImportLearnedPatterns({
             ))}
             {preview.diff.conflicts.map((p) => (
               <li key={p.host} className="flex items-center gap-2">
-                <AlertCircle className="size-3 text-amber-500 flex-shrink-0" />
+                <AlertCircle className="size-3 text-amber-500 shrink-0" />
                 <span className="truncate">
                   <strong className="text-foreground">{p.host}</strong> — remplacera la version
                   actuelle
@@ -389,10 +389,10 @@ function ActivatedHostsSection() {
   const [removing, setRemoving] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const res = (await sendMessage({
+    const res: ListActivatedHostsResultPayload = await sendMessage({
       type: 'LIST_ACTIVATED_HOSTS',
-    })) as ListActivatedHostsResultPayload;
-    setHosts(res.hosts.sort((a, b) => b.activatedAt - a.activatedAt));
+    });
+    setHosts(res.hosts.toSorted((a, b) => b.activatedAt - a.activatedAt));
   }, []);
 
   useEffect(() => {
@@ -429,7 +429,7 @@ function ActivatedHostsSection() {
         </div>
       )}
 
-      {hosts && hosts.length === 0 && (
+      {hosts?.length === 0 && (
         <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           Aucun site activé manuellement. Visite un site de streaming non couvert et clique «
           Activer Actunime sur ce site » dans le popup pour l'ajouter.
@@ -444,7 +444,7 @@ function ActivatedHostsSection() {
               className="flex items-center justify-between gap-3 rounded-md border border-border bg-card p-3"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Globe className="size-4 text-muted-foreground flex-shrink-0" />
+                <Globe className="size-4 text-muted-foreground shrink-0" />
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{row.host}</div>
                   <div className="text-xs text-muted-foreground">

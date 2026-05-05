@@ -144,7 +144,7 @@ export function App() {
           </button>
           {actionState === 'error' && errorMessage && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
-              <AlertCircle className="size-3.5 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -202,7 +202,7 @@ export function App() {
               </p>
               <p className="text-xs text-muted-foreground truncate">@{auth.user.username}</p>
             </div>
-            <ExternalLink className="size-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+            <ExternalLink className="size-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </button>
 
           <div className="grid grid-cols-2 gap-2">
@@ -268,7 +268,7 @@ function UpdateBanner() {
   return (
     <div className="rounded-md border border-primary/40 bg-primary/5 p-3 flex flex-col gap-2">
       <div className="flex items-start gap-2">
-        <ArrowUpCircle className="size-4 text-primary flex-shrink-0 mt-0.5" />
+        <ArrowUpCircle className="size-4 text-primary shrink-0 mt-0.5" />
         <div className="text-xs leading-relaxed">
           <strong className="text-foreground">Mise à jour disponible</strong>{' '}
           <span className="text-muted-foreground">
@@ -326,7 +326,7 @@ function ContributionSuccessCard({
   return (
     <section className="rounded-md border border-success/40 bg-success/5 p-4 flex flex-col gap-3">
       <div className="flex items-start gap-2">
-        <CheckCircle2 className="size-5 text-success flex-shrink-0 mt-0.5" />
+        <CheckCircle2 className="size-5 text-success shrink-0 mt-0.5" />
         <div className="flex flex-col gap-1">
           <p className="text-sm font-semibold text-foreground">
             {joinedExisting ? 'Proposition existante rejointe' : 'Proposition envoyée'}
@@ -361,7 +361,7 @@ function SiteActivationCard() {
   if (state === 'activated') {
     return (
       <div className="rounded-md border border-success/30 bg-success/5 p-2 flex items-center gap-2 text-xs">
-        <Check className="size-3.5 text-success flex-shrink-0" />
+        <Check className="size-3.5 text-success shrink-0" />
         <span className="text-muted-foreground">
           Actif sur <strong className="text-foreground">{host}</strong>
         </span>
@@ -676,7 +676,7 @@ function ApiHealthBanner() {
   return (
     <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex flex-col gap-2">
       <div className="flex items-start gap-2">
-        <AlertCircle className="size-4 text-destructive flex-shrink-0 mt-0.5" />
+        <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
         <div className="text-xs leading-relaxed">
           <strong className="text-destructive">Serveur Actunime indisponible.</strong>{' '}
           <span className="text-muted-foreground">

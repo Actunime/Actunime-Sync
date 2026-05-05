@@ -17,9 +17,9 @@ export function buildResumeUrl(
   const kw = '(?:chapter|chapitre|chap|episode|épisode|episode|ep|ch)';
 
   const patterns: RegExp[] = [
-    new RegExp(`(?<=${kw}[-_/])${cur}(?=[/?#&_-]|$)`, 'i'),
-    new RegExp(`(?<=${kw}=)${cur}(?=[&#]|$)`, 'i'),
-    new RegExp(`(?<=s\\d+e)${cur}(?=[/?#&_-]|$)`, 'i'),
+    new RegExp(String.raw`(?<=${kw}[-_/])${cur}(?=[/?#&_-]|$)`, 'i'),
+    new RegExp(String.raw`(?<=${kw}=)${cur}(?=[&#]|$)`, 'i'),
+    new RegExp(String.raw`(?<=s\d+e)${cur}(?=[/?#&_-]|$)`, 'i'),
   ];
 
   for (const re of patterns) {

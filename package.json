@@ -19,7 +19,6 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --fix",
-    "lint:fix": "eslint . --ext ts,tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,md,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,md,css}\"",
     "type-check": "tsc --noEmit",

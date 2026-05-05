@@ -19,14 +19,14 @@ export interface LearnedPatternsExport {
   patterns: LearnedPattern[];
 }
 
-const VALID_STRATEGIES: StrategyId[] = [
+const VALID_STRATEGIES = new Set<StrategyId>([
   'jsonld',
   'og',
   'url-tokens',
   'document-title',
   'dom-selectors',
   'manual',
-];
+]);
 
 /**
  * Produit le JSON formaté à télécharger / partager.
@@ -64,7 +64,7 @@ export function parseLearnedPatternsExport(json: string): ParseResult {
     return { ok: false, error: 'Le fichier ne contient pas un objet JSON.' };
   }
 
-  const versionRaw = (parsed as Record<string, unknown>).version;
+  const versionRaw = parsed.version;
   const version = typeof versionRaw === 'number' ? versionRaw : null;
   if (version !== EXPORT_VERSION) {
     return {
@@ -73,7 +73,7 @@ export function parseLearnedPatternsExport(json: string): ParseResult {
     };
   }
 
-  const patternsRaw = (parsed as Record<string, unknown>).patterns;
+  const patternsRaw = parsed.patterns;
   if (!Array.isArray(patternsRaw)) {
     return { ok: false, error: 'Champ « patterns » manquant ou invalide.' };
   }
@@ -112,15 +112,15 @@ function validatePattern(p: unknown): LearnedPattern | null {
   const kind = p.kind;
   if (kind !== 'anime' && kind !== 'manga') return null;
 
-  const strategy = p.strategy;
-  if (typeof strategy !== 'string' || !VALID_STRATEGIES.includes(strategy as StrategyId)) {
+  const strategy = p.strategy as StrategyId;
+  if (typeof strategy !== 'string' || !VALID_STRATEGIES.has(strategy)) {
     return null;
   }
 
   const out: LearnedPattern = {
     host,
     kind,
-    strategy: strategy as StrategyId,
+    strategy,
     createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date().toISOString(),
     updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : new Date().toISOString(),
   };
@@ -206,7 +206,7 @@ export function diffImport(incoming: LearnedPattern[], existing: LearnedPattern[
  */
 export function suggestFilename(patterns: LearnedPattern[]): string {
   if (patterns.length === 1) {
-    const safe = patterns[0].host.replace(/[^a-z0-9.-]/gi, '-');
+    const safe = patterns[0].host.replaceAll(/[^a-z0-9.-]/gi, '-');
     return `actunime-pattern-${safe}.json`;
   }
   const date = new Date().toISOString().slice(0, 10);

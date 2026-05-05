@@ -108,7 +108,7 @@ const DEFAULT_PREFERENCES: Preferences = {
 };
 
 async function getAll(): Promise<LocalState> {
-  const raw = (await chrome.storage.local.get(null)) as Partial<LocalState>;
+  const raw = await chrome.storage.local.get(null);
   return {
     auth: raw.auth ?? null,
     matchings: raw.matchings ?? {},
@@ -118,7 +118,7 @@ async function getAll(): Promise<LocalState> {
     pendingContribution: raw.pendingContribution ?? null,
     pendingImagePickResult: raw.pendingImagePickResult ?? null,
     learnedPatterns: raw.learnedPatterns ?? {},
-    preferences: { ...DEFAULT_PREFERENCES, ...(raw.preferences ?? {}) },
+    preferences: { ...DEFAULT_PREFERENCES, ...raw.preferences },
   };
 }
 
@@ -126,7 +126,7 @@ export const storage = {
   getAll,
 
   async getAuth(): Promise<AuthState | null> {
-    const { auth } = (await chrome.storage.local.get('auth')) as { auth?: AuthState };
+    const { auth } = await chrome.storage.local.get('auth');
     if (!auth) return null;
     if (auth.expiresAt < Date.now()) return null;
     return auth;
@@ -141,10 +141,8 @@ export const storage = {
   },
 
   async getPreferences(): Promise<Preferences> {
-    const { preferences } = (await chrome.storage.local.get('preferences')) as {
-      preferences?: Preferences;
-    };
-    return { ...DEFAULT_PREFERENCES, ...(preferences ?? {}) };
+    const { preferences } = await chrome.storage.local.get('preferences');
+    return { ...DEFAULT_PREFERENCES, ...preferences };
   },
 
   async setPreferences(patch: Partial<Preferences>): Promise<void> {
@@ -153,39 +151,29 @@ export const storage = {
   },
 
   async getMatching(seriesKey: string): Promise<MatchingEntry | null> {
-    const { matchings = {} } = (await chrome.storage.local.get('matchings')) as {
-      matchings?: Record<string, MatchingEntry>;
-    };
+    const { matchings = {} } = await chrome.storage.local.get('matchings');
     return matchings[seriesKey] ?? null;
   },
 
   async setMatching(seriesKey: string, entry: MatchingEntry): Promise<void> {
-    const { matchings = {} } = (await chrome.storage.local.get('matchings')) as {
-      matchings?: Record<string, MatchingEntry>;
-    };
+    const { matchings = {} } = await chrome.storage.local.get('matchings');
     matchings[seriesKey] = entry;
     await chrome.storage.local.set({ matchings });
   },
 
   async isSeriesIgnored(seriesKey: string): Promise<boolean> {
-    const { ignoredSeries = {} } = (await chrome.storage.local.get('ignoredSeries')) as {
-      ignoredSeries?: Record<string, true>;
-    };
+    const { ignoredSeries = {} } = await chrome.storage.local.get('ignoredSeries');
     return ignoredSeries[seriesKey] === true;
   },
 
   async ignoreSeries(seriesKey: string): Promise<void> {
-    const { ignoredSeries = {} } = (await chrome.storage.local.get('ignoredSeries')) as {
-      ignoredSeries?: Record<string, true>;
-    };
+    const { ignoredSeries = {} } = await chrome.storage.local.get('ignoredSeries');
     ignoredSeries[seriesKey] = true;
     await chrome.storage.local.set({ ignoredSeries });
   },
 
   async getActivatedHosts(): Promise<Record<string, { activatedAt: number }>> {
-    const { activatedHosts = {} } = (await chrome.storage.local.get('activatedHosts')) as {
-      activatedHosts?: Record<string, { activatedAt: number }>;
-    };
+    const { activatedHosts = {} } = await chrome.storage.local.get('activatedHosts');
     return activatedHosts;
   },
 
@@ -210,9 +198,7 @@ export const storage = {
   },
 
   async getPendingContribution(): Promise<LocalState['pendingContribution']> {
-    const { pendingContribution } = (await chrome.storage.local.get('pendingContribution')) as {
-      pendingContribution?: LocalState['pendingContribution'];
-    };
+    const { pendingContribution } = await chrome.storage.local.get('pendingContribution');
     return pendingContribution ?? null;
   },
 
@@ -225,16 +211,12 @@ export const storage = {
   },
 
   async getPendingImagePickResult(): Promise<string | null> {
-    const { pendingImagePickResult } = (await chrome.storage.local.get(
-      'pendingImagePickResult',
-    )) as { pendingImagePickResult?: string | null };
+    const { pendingImagePickResult } = await chrome.storage.local.get('pendingImagePickResult');
     return pendingImagePickResult ?? null;
   },
 
   async consumePendingWizardForHost(host: string): Promise<boolean> {
-    const { pendingWizardForHost } = (await chrome.storage.local.get('pendingWizardForHost')) as {
-      pendingWizardForHost?: string | null;
-    };
+    const { pendingWizardForHost } = await chrome.storage.local.get('pendingWizardForHost');
     if (pendingWizardForHost && pendingWizardForHost === host) {
       await chrome.storage.local.set({ pendingWizardForHost: null });
       return true;
@@ -243,44 +225,33 @@ export const storage = {
   },
 
   async getLearnedPattern(host: string): Promise<LearnedPattern | null> {
-    const { learnedPatterns = {} } = (await chrome.storage.local.get('learnedPatterns')) as {
-      learnedPatterns?: Record<string, LearnedPattern>;
-    };
+    const { learnedPatterns = {} } = await chrome.storage.local.get('learnedPatterns');
     return learnedPatterns[host] ?? null;
   },
 
   async setLearnedPattern(pattern: LearnedPattern): Promise<void> {
-    const { learnedPatterns = {} } = (await chrome.storage.local.get('learnedPatterns')) as {
-      learnedPatterns?: Record<string, LearnedPattern>;
-    };
+    const { learnedPatterns = {} } = await chrome.storage.local.get('learnedPatterns');
     learnedPatterns[pattern.host] = pattern;
     await chrome.storage.local.set({ learnedPatterns });
   },
 
   async removeLearnedPattern(host: string): Promise<void> {
-    const { learnedPatterns = {} } = (await chrome.storage.local.get('learnedPatterns')) as {
-      learnedPatterns?: Record<string, LearnedPattern>;
-    };
+    const { learnedPatterns = {} } = await chrome.storage.local.get('learnedPatterns');
     delete learnedPatterns[host];
     await chrome.storage.local.set({ learnedPatterns });
   },
 
   async listLearnedPatterns(): Promise<LearnedPattern[]> {
-    const { learnedPatterns = {} } = (await chrome.storage.local.get('learnedPatterns')) as {
-      learnedPatterns?: Record<string, LearnedPattern>;
-    };
+    const { learnedPatterns = {} } = await chrome.storage.local.get('learnedPatterns');
     return Object.values(learnedPatterns);
   },
 
   /** Oublie le match cache + lève l'éventuel ignore — pour le bouton « Modifier » du badge. */
   async forgetMatch(seriesKey: string): Promise<void> {
-    const { matchings = {}, ignoredSeries = {} } = (await chrome.storage.local.get([
+    const { matchings = {}, ignoredSeries = {} } = await chrome.storage.local.get([
       'matchings',
       'ignoredSeries',
-    ])) as {
-      matchings?: Record<string, MatchingEntry>;
-      ignoredSeries?: Record<string, true>;
-    };
+    ]);
     delete matchings[seriesKey];
     delete ignoredSeries[seriesKey];
     await chrome.storage.local.set({ matchings, ignoredSeries });
