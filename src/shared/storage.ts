@@ -294,10 +294,7 @@ export const storage = {
     key: K,
     callback: (newValue: LocalState[K] | undefined, oldValue: LocalState[K] | undefined) => void,
   ): () => void {
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      areaName: string,
-    ) => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
       if (areaName !== 'local') return;
       if (!(key in changes)) return;
       callback(changes[key].newValue as LocalState[K], changes[key].oldValue as LocalState[K]);

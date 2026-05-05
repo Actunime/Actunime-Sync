@@ -56,7 +56,11 @@ export const CountrySelection = [
   { value: 'JAPAN', label: 'Japon', description: 'Manga japonais.' },
   { value: 'KOREA', label: 'Corée du Sud', description: 'Une bande dessinée coréenne.' },
   { value: 'CHINA', label: 'Chine', description: 'Une bande dessinée chinoise.' },
-  { value: 'OTHER', label: 'Autre', description: "Le type de pays n'est pas disponible dans ceux proposées." },
+  {
+    value: 'OTHER',
+    label: 'Autre',
+    description: "Le type de pays n'est pas disponible dans ceux proposées.",
+  },
 ];
 
 export const MangaFormatSelection = [
@@ -91,16 +95,44 @@ export const MangaFormatSelection = [
     label: 'One shot',
     description: 'Une histoire qui se termine après un seul chapitre ou un seul volume.',
   },
-  { value: 'OTHER', label: 'Autre', description: "Le type de source n'est pas disponible dans ceux proposées." },
+  {
+    value: 'OTHER',
+    label: 'Autre',
+    description: "Le type de source n'est pas disponible dans ceux proposées.",
+  },
   { value: 'UNKNOWN', label: 'Inconnu', description: 'Le format du manga est inconnu.' },
 ];
 
 export const MediaStatusSelection = [
-  { value: 'AIRING', label: 'En cours', description: "L'anime est actuellement en cours de diffusion." },
-  { value: 'PAUSED', label: 'En pause', description: "La diffusion de l'anime est temporairement interrompue." },
+  {
+    value: 'AIRING',
+    label: 'En cours',
+    description: "L'anime est actuellement en cours de diffusion.",
+  },
+  {
+    value: 'PAUSED',
+    label: 'En pause',
+    description: "La diffusion de l'anime est temporairement interrompue.",
+  },
   { value: 'ENDED', label: 'Terminé', description: "L'anime a terminé sa diffusion." },
-  { value: 'STOPPED', label: 'Arrêté', description: "La diffusion de l'anime a été arrêtée avant la fin prévue." },
-  { value: 'POSTONED', label: 'Reporté', description: "La diffusion de l'anime a été reportée à une date ultérieure." },
-  { value: 'SOON', label: 'Bientôt', description: "L'anime commencera à être diffusé prochainement." },
-  { value: 'UNKNOWN', label: 'Inconnu', description: "Le statut de diffusion de l'anime est inconnu." },
+  {
+    value: 'STOPPED',
+    label: 'Arrêté',
+    description: "La diffusion de l'anime a été arrêtée avant la fin prévue.",
+  },
+  {
+    value: 'POSTONED',
+    label: 'Reporté',
+    description: "La diffusion de l'anime a été reportée à une date ultérieure.",
+  },
+  {
+    value: 'SOON',
+    label: 'Bientôt',
+    description: "L'anime commencera à être diffusé prochainement.",
+  },
+  {
+    value: 'UNKNOWN',
+    label: 'Inconnu',
+    description: "Le statut de diffusion de l'anime est inconnu.",
+  },
 ];

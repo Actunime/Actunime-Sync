@@ -5,7 +5,7 @@ import {
   entityId,
   type ListEntry,
   type SearchMedia,
-} from "@/shared/api-client";
+} from '@/shared/api-client';
 import type {
   CandidateMedia,
   ConfirmResultPayload,
@@ -16,8 +16,8 @@ import type {
   TrackResultPayload,
   UndoLastPushResultPayload,
   UndoSnapshot,
-} from "@/shared/messaging";
-import { storage, type MatchingEntry } from "@/shared/storage";
+} from '@/shared/messaging';
+import { storage, type MatchingEntry } from '@/shared/storage';
 import {
   matchTitle,
   pickDisplayTitle,
@@ -25,7 +25,7 @@ import {
   type MediaKind,
   type MediaType,
   type ScoredMedia,
-} from "./matcher";
+} from './matcher';
 
 const sessionPushed = new Set<string>();
 
@@ -44,12 +44,12 @@ export async function handleDiscovery(
     });
 
     if (await storage.isSeriesIgnored(result.seriesKey)) {
-      return { state: "ignored" };
+      return { state: 'ignored' };
     }
 
     if (result.pending) {
       await storage.setMatching(result.seriesKey, {
-        kind: "pending",
+        kind: 'pending',
         listEntryId: result.pending.listEntryId,
         mediaType: result.pending.mediaType,
         title: result.pending.title,
@@ -60,20 +60,17 @@ export async function handleDiscovery(
       let pendingEntry: ListEntry | null = null;
       try {
         const all = await api.getPendingListEntries();
-        pendingEntry =
-          all.find((e) => entityId(e) === result.pending!.listEntryId) ?? null;
+        pendingEntry = all.find((e) => entityId(e) === result.pending!.listEntryId) ?? null;
       } catch {
         // best-effort
       }
 
       const status = pendingEntry?.status ?? result.pending.status;
-      const episodesWatched =
-        pendingEntry?.episodesWatched ?? result.pending.episodesWatched;
-      const chaptersRead =
-        pendingEntry?.chaptersRead ?? result.pending.chaptersRead;
+      const episodesWatched = pendingEntry?.episodesWatched ?? result.pending.episodesWatched;
+      const chaptersRead = pendingEntry?.chaptersRead ?? result.pending.chaptersRead;
 
       return {
-        state: "cached",
+        state: 'cached',
         seriesKey: result.seriesKey,
         matchedTitle: result.pending.title,
         coverUrl: result.pending.coverUrl ?? null,
@@ -93,12 +90,12 @@ export async function handleDiscovery(
         existing = await api.getListByMedia(result.cached.mediaId);
       } catch (err) {
         if (!(err instanceof ApiError && err.status === 404)) {
-          console.warn("[Actunime] getListByMedia échoué:", err);
+          console.warn('[Actunime] getListByMedia échoué:', err);
         }
       }
 
       return {
-        state: "cached",
+        state: 'cached',
         seriesKey: result.seriesKey,
         matchedTitle: result.cached.title,
         coverUrl: result.cached.coverUrl ?? null,
@@ -114,11 +111,9 @@ export async function handleDiscovery(
     }
 
     const candidates =
-      result.candidates.length > 0
-        ? await enrichCandidates(result.candidates, result.kind)
-        : [];
+      result.candidates.length > 0 ? await enrichCandidates(result.candidates, result.kind) : [];
     return {
-      state: "needs_confirmation",
+      state: 'needs_confirmation',
       seriesKey: result.seriesKey,
       candidates,
       detection: {
@@ -130,17 +125,16 @@ export async function handleDiscovery(
     };
   } catch (err) {
     console.error(err);
-    return { state: "error", error: formatError(err) };
+    return { state: 'error', error: formatError(err) };
   }
 }
 
 export async function handleResearch(
   query: string,
-  kind: MediaKind = "anime",
+  kind: MediaKind = 'anime',
 ): Promise<ResearchResultPayload> {
   const cleaned = query.trim();
-  if (cleaned.length < 2)
-    return { candidates: [], error: "Requête trop courte" };
+  if (cleaned.length < 2) return { candidates: [], error: 'Requête trop courte' };
   try {
     const [items, pendingProposals] = await Promise.all([
       api.searchByKind(kind, cleaned, 10).catch(() => [] as SearchMedia[]),
@@ -187,19 +181,19 @@ export async function handleConfirm(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _context: { lastDetection?: ProgressUpdatePayload },
 ): Promise<ConfirmResultPayload> {
-  if (payload.action === "skip") return { state: "skipped" };
+  if (payload.action === 'skip') return { state: 'skipped' };
 
-  if (payload.action === "ignore_series") {
+  if (payload.action === 'ignore_series') {
     await storage.ignoreSeries(payload.seriesKey);
-    return { state: "ignored" };
+    return { state: 'ignored' };
   }
 
   try {
-    const kind: MediaKind = payload.kind ?? "anime";
+    const kind: MediaKind = payload.kind ?? 'anime';
     const mediaType = kindToMediaType(kind);
 
     if (payload.proposalId) {
-      const defaultStatus = kind === "manga" ? "READING" : "WATCHING";
+      const defaultStatus = kind === 'manga' ? 'READING' : 'WATCHING';
       const entry = await api.createListEntryFromProposal({
         proposalId: payload.proposalId,
         mediaType,
@@ -209,9 +203,9 @@ export async function handleConfirm(
           coverImage: payload.chosenCoverUrl ?? undefined,
         },
       });
-      const listEntryId = entityId(entry) ?? "";
+      const listEntryId = entityId(entry) ?? '';
       await storage.setMatching(payload.seriesKey, {
-        kind: "pending",
+        kind: 'pending',
         listEntryId,
         mediaType,
         title: payload.chosenTitle,
@@ -219,7 +213,7 @@ export async function handleConfirm(
         confirmedAt: Date.now(),
       });
       return {
-        state: "cached",
+        state: 'cached',
         seriesKey: payload.seriesKey,
         matchedTitle: payload.chosenTitle,
         coverUrl: payload.chosenCoverUrl,
@@ -235,7 +229,7 @@ export async function handleConfirm(
     }
 
     await storage.setMatching(payload.seriesKey, {
-      kind: "media",
+      kind: 'media',
       mediaId: payload.chosenMediaId,
       mediaType,
       title: payload.chosenTitle,
@@ -249,12 +243,12 @@ export async function handleConfirm(
       existingListEntry = await api.getListByMedia(payload.chosenMediaId);
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 404)) {
-        console.warn("[Actunime] getListByMedia post-confirm échoué:", err);
+        console.warn('[Actunime] getListByMedia post-confirm échoué:', err);
       }
     }
 
     return {
-      state: "cached",
+      state: 'cached',
       seriesKey: payload.seriesKey,
       matchedTitle: payload.chosenTitle,
       coverUrl: payload.chosenCoverUrl,
@@ -268,7 +262,7 @@ export async function handleConfirm(
         : null,
     };
   } catch (err) {
-    return { state: "error", error: formatError(err) };
+    return { state: 'error', error: formatError(err) };
   }
 }
 
@@ -276,7 +270,7 @@ export async function handleProgressUpdate(
   payload: ProgressUpdatePayload,
 ): Promise<TrackResultPayload> {
   try {
-    const seriesKey = `${payload.siteId}:${payload.seriesId ?? payload.seriesSlug ?? payload.slug ?? payload.title ?? "unknown"}`;
+    const seriesKey = `${payload.siteId}:${payload.seriesId ?? payload.seriesSlug ?? payload.slug ?? payload.title ?? 'unknown'}`;
 
     if (await storage.isSeriesIgnored(seriesKey)) {
       return { success: false, ignored: true };
@@ -284,10 +278,10 @@ export async function handleProgressUpdate(
 
     const entry = await storage.getMatching(seriesKey);
     if (!entry) {
-      return { success: false, error: "not_confirmed" };
+      return { success: false, error: 'not_confirmed' };
     }
 
-    if (entry.kind === "pending") {
+    if (entry.kind === 'pending') {
       return pushPendingProgress({
         listEntryId: entry.listEntryId,
         mediaType: entry.mediaType,
@@ -326,14 +320,11 @@ interface PushPendingArgs {
   seriesKey: string;
 }
 
-async function pushPendingProgress(
-  args: PushPendingArgs,
-): Promise<TrackResultPayload> {
-  const { listEntryId, mediaType, matchedTitle, episode, chapter, seriesKey } =
-    args;
-  const isManga = mediaType === "Manga";
+async function pushPendingProgress(args: PushPendingArgs): Promise<TrackResultPayload> {
+  const { listEntryId, mediaType, matchedTitle, episode, chapter, seriesKey } = args;
+  const isManga = mediaType === 'Manga';
   const target = isManga ? chapter : episode;
-  const sessionKey = `pending:${listEntryId}:${target ?? "x"}`;
+  const sessionKey = `pending:${listEntryId}:${target ?? 'x'}`;
 
   if (sessionPushed.has(sessionKey)) {
     return {
@@ -348,20 +339,18 @@ async function pushPendingProgress(
 
   try {
     let previousCount: number | undefined;
-    let previousStatus: ListEntry["status"] | undefined;
+    let previousStatus: ListEntry['status'] | undefined;
     try {
       const fresh = await api.getPendingListEntries();
       const current = fresh.find((e) => entityId(e) === listEntryId);
-      previousCount = isManga
-        ? current?.chaptersRead
-        : current?.episodesWatched;
+      previousCount = isManga ? current?.chaptersRead : current?.episodesWatched;
       previousStatus = current?.status;
     } catch {
       // best-effort
     }
 
     const targetCount = target ?? (previousCount ?? 0) + 1;
-    const kind: MediaKind = isManga ? "manga" : "anime";
+    const kind: MediaKind = isManga ? 'manga' : 'anime';
 
     if (targetCount < (previousCount ?? 0)) {
       return {
@@ -388,11 +377,9 @@ async function pushPendingProgress(
       };
     }
 
-    const activeStatus = isManga ? "READING" : "WATCHING";
+    const activeStatus = isManga ? 'READING' : 'WATCHING';
     await api.updateListEntry(listEntryId, {
-      ...(isManga
-        ? { chaptersRead: targetCount }
-        : { episodesWatched: targetCount }),
+      ...(isManga ? { chaptersRead: targetCount } : { episodesWatched: targetCount }),
       status: activeStatus,
     });
     sessionPushed.add(sessionKey);
@@ -426,16 +413,13 @@ interface PushMediaArgs {
   isRewatch: boolean;
 }
 
-async function pushMediaProgress(
-  args: PushMediaArgs,
-): Promise<TrackResultPayload> {
-  const { mediaId, mediaType, matchedTitle, episode, chapter, isRewatch } =
-    args;
-  const isManga = mediaType === "Manga";
+async function pushMediaProgress(args: PushMediaArgs): Promise<TrackResultPayload> {
+  const { mediaId, mediaType, matchedTitle, episode, chapter, isRewatch } = args;
+  const isManga = mediaType === 'Manga';
   const target = isManga ? chapter : episode;
-  const activeStatus = isManga ? "READING" : "WATCHING";
+  const activeStatus = isManga ? 'READING' : 'WATCHING';
 
-  const sessionKey = `${mediaId}:${target ?? "x"}:${isRewatch ? "re" : "first"}`;
+  const sessionKey = `${mediaId}:${target ?? 'x'}:${isRewatch ? 're' : 'first'}`;
   if (sessionPushed.has(sessionKey)) {
     return {
       success: true,
@@ -454,15 +438,13 @@ async function pushMediaProgress(
     if (!(err instanceof ApiError && err.status === 404)) throw err;
   }
 
-  const previousCount = isManga
-    ? existing?.chaptersRead
-    : existing?.episodesWatched;
+  const previousCount = isManga ? existing?.chaptersRead : existing?.episodesWatched;
   const targetCount = target ?? (previousCount ?? 0) + 1;
   let undo: UndoSnapshot | undefined;
 
   if (existing) {
     const existingId = entityId(existing);
-    if (!existingId) throw new Error("List entry sans id");
+    if (!existingId) throw new Error('List entry sans id');
     undo = {
       listEntryId: existingId,
       previousEpisodesWatched: !isManga ? existing.episodesWatched : undefined,
@@ -471,9 +453,7 @@ async function pushMediaProgress(
       previousRewatchCount: !isManga ? existing.rewatchCount : undefined,
       wasCreated: false,
     };
-    const countPatch = isManga
-      ? { chaptersRead: targetCount }
-      : { episodesWatched: targetCount };
+    const countPatch = isManga ? { chaptersRead: targetCount } : { episodesWatched: targetCount };
     if (isRewatch && !isManga) {
       await api.updateListEntry(existingId, {
         ...countPatch,
@@ -493,9 +473,7 @@ async function pushMediaProgress(
       mediaId,
       mediaType,
       status: activeStatus,
-      ...(isManga
-        ? { chaptersRead: targetCount }
-        : { episodesWatched: targetCount }),
+      ...(isManga ? { chaptersRead: targetCount } : { episodesWatched: targetCount }),
     });
     const createdId = entityId(created);
     if (createdId) {
@@ -529,7 +507,7 @@ export async function handleUndoLastPush(
     const patch: {
       episodesWatched?: number;
       chaptersRead?: number;
-      status?: ListEntry["status"];
+      status?: ListEntry['status'];
       rewatchCount?: number;
     } = isManga
       ? { chaptersRead: snapshot.previousChaptersRead ?? 0 }
@@ -559,7 +537,7 @@ export async function enrichCandidates(
       const year =
         start instanceof Date
           ? start.getFullYear()
-          : typeof start === "string"
+          : typeof start === 'string'
             ? new Date(start).getFullYear() || null
             : null;
 
@@ -575,9 +553,9 @@ export async function enrichCandidates(
       const existingId = entityId(existing);
 
       return {
-        id: mediaId ?? "",
+        id: mediaId ?? '',
         mediaType,
-        title: pickDisplayTitle(m) ?? "",
+        title: pickDisplayTitle(m) ?? '',
         alias: m.title?.alias,
         coverUrl: m.posterUrl ?? m.cover?.url ?? null,
         year: Number.isFinite(year) ? year : null,
@@ -600,23 +578,23 @@ export async function enrichCandidates(
 function formatError(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === API_NETWORK_ERROR_STATUS) {
-      return "Serveur Actunime indisponible. Vérifie ta connexion ou réessaie dans quelques instants.";
+      return 'Serveur Actunime indisponible. Vérifie ta connexion ou réessaie dans quelques instants.';
     }
     if (err.status >= 500) {
       return `Erreur serveur Actunime (HTTP ${err.status}). Réessaie plus tard.`;
     }
     if (err.status === 401) {
-      return "Session expirée. Reconnecte-toi via le popup.";
+      return 'Session expirée. Reconnecte-toi via le popup.';
     }
     if (err.status === 403) {
-      return "Action refusée par le serveur.";
+      return 'Action refusée par le serveur.';
     }
     if (err.status === 404) {
-      return "Ressource introuvable côté Actunime.";
+      return 'Ressource introuvable côté Actunime.';
     }
     return `${err.status} ${err.message}`;
   }
-  return (err as Error)?.message ?? "Erreur inconnue";
+  return (err as Error)?.message ?? 'Erreur inconnue';
 }
 
 export type { MatchingEntry };

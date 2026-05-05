@@ -19,7 +19,9 @@ export function useApiHealth(): {
     let cancelled = false;
     const run = async () => {
       try {
-        const res = (await sendMessage({ type: 'CHECK_API_HEALTH' })) as CheckApiHealthResultPayload;
+        const res = (await sendMessage({
+          type: 'CHECK_API_HEALTH',
+        })) as CheckApiHealthResultPayload;
         if (cancelled) return;
         setStatus(res.ok ? 'ok' : 'down');
       } catch {

@@ -19,10 +19,7 @@ function isScrollable(el: HTMLElement): boolean {
 }
 
 function findScrollContainer(): ScrollTarget {
-  const docHeight = Math.max(
-    document.body.scrollHeight,
-    document.documentElement.scrollHeight,
-  );
+  const docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
   if (docHeight > window.innerHeight + 100) {
     return { element: null, isWindow: true };
   }
@@ -44,7 +41,11 @@ function findScrollContainer(): ScrollTarget {
   return { element: best, isWindow: false };
 }
 
-function readScrollMetrics(target: ScrollTarget): { scrollTop: number; viewport: number; total: number } {
+function readScrollMetrics(target: ScrollTarget): {
+  scrollTop: number;
+  viewport: number;
+  total: number;
+} {
   if (target.isWindow) {
     return {
       scrollTop: window.scrollY || document.documentElement.scrollTop || 0,

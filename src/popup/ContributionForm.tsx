@@ -34,10 +34,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { storage } from '@/shared/storage';
-import {
-  sendMessage,
-  type ContributeProposeMediaResultPayload,
-} from '@/shared/messaging';
+import { sendMessage, type ContributeProposeMediaResultPayload } from '@/shared/messaging';
 
 interface ContributionFormProps {
   detectedKind?: 'anime' | 'manga';
@@ -97,7 +94,7 @@ export function ContributionForm({
       }
       setCoverDataUrl(result.dataUrl);
     } catch (err) {
-      setCoverError((err as Error)?.message ?? 'Erreur de récupération de l\'image.');
+      setCoverError((err as Error)?.message ?? "Erreur de récupération de l'image.");
     } finally {
       setCoverLoading(false);
     }
@@ -238,10 +235,10 @@ export function ContributionForm({
       </div>
 
       <div className="rounded-md border border-warning/40 bg-warning/5 p-2.5 text-[11px] leading-relaxed text-foreground">
-        <strong className="text-warning">Avant de proposer, vérifie d'abord</strong> avec
-        la recherche manuelle dans la card de confirmation — ton œuvre existe peut-être
-        déjà sous un titre légèrement différent. Si tu la trouves, la sélectionner
-        proposera automatiquement ton titre comme synonyme pour aider les autres.
+        <strong className="text-warning">Avant de proposer, vérifie d'abord</strong> avec la
+        recherche manuelle dans la card de confirmation — ton œuvre existe peut-être déjà sous un
+        titre légèrement différent. Si tu la trouves, la sélectionner proposera automatiquement ton
+        titre comme synonyme pour aider les autres.
       </div>
 
       <div className="flex flex-col gap-2">
@@ -259,7 +256,8 @@ export function ContributionForm({
 
       <div className="flex flex-col gap-1">
         <label className="text-xs font-medium">
-          Synonymes / titres alternatifs <span className="text-muted-foreground font-normal">(optionnel)</span>
+          Synonymes / titres alternatifs{' '}
+          <span className="text-muted-foreground font-normal">(optionnel)</span>
         </label>
         <input
           type="text"
@@ -270,8 +268,8 @@ export function ContributionForm({
           className="rounded-md border border-border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <p className="text-[10px] text-muted-foreground leading-snug">
-          Améliore la détection si d'autres utilisateurs ont des sites avec un titre différent
-          pour la même œuvre — moins de doublons à fusionner ensuite.
+          Améliore la détection si d'autres utilisateurs ont des sites avec un titre différent pour
+          la même œuvre — moins de doublons à fusionner ensuite.
         </p>
       </div>
 
@@ -345,11 +343,7 @@ export function ContributionForm({
         <label className="text-xs font-medium">
           Image de couverture <span className="text-destructive">*</span>
         </label>
-        <CoverPreview
-          coverDataUrl={coverDataUrl}
-          loading={coverLoading}
-          error={coverError}
-        />
+        <CoverPreview coverDataUrl={coverDataUrl} loading={coverLoading} error={coverError} />
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={detectCover}
@@ -390,26 +384,20 @@ export function ContributionForm({
         </div>
       </div>
 
-      {submitError && (
-        <div className="text-xs text-destructive">{submitError}</div>
-      )}
+      {submitError && <div className="text-xs text-destructive">{submitError}</div>}
 
       <button
         onClick={submit}
         disabled={submitting || !title.trim() || !coverDataUrl}
         className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
-        {submitting ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : (
-          <Send className="size-3.5" />
-        )}
+        {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
         Proposer et ajouter à ma liste
       </button>
 
       <p className="text-[10px] text-muted-foreground leading-snug">
-        L'œuvre sera ajoutée à ta liste avec le statut « Planifié » en attendant la
-        validation par l'équipe Actunime.
+        L'œuvre sera ajoutée à ta liste avec le statut « Planifié » en attendant la validation par
+        l'équipe Actunime.
       </p>
     </section>
   );
@@ -430,7 +418,6 @@ function CoverPreview({
   if (coverDataUrl) {
     return (
       <div className="rounded-md overflow-hidden border border-border bg-muted/20 flex items-center justify-center max-h-40">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={coverDataUrl} alt="Aperçu cover" className="max-h-40 object-contain" />
       </div>
     );
@@ -443,9 +430,7 @@ function CoverPreview({
   );
 }
 
-type CoverFetchResult =
-  | { ok: true; dataUrl: string }
-  | { ok: false; error: string };
+type CoverFetchResult = { ok: true; dataUrl: string } | { ok: false; error: string };
 
 async function detectAndFetchCoverInPage(): Promise<CoverFetchResult> {
   try {
@@ -457,9 +442,7 @@ async function detectAndFetchCoverInPage(): Promise<CoverFetchResult> {
       target: { tabId: tab.id },
       func: async () => {
         // 1) Localise une URL d'image à partir du DOM
-        const og = document
-          .querySelector<HTMLMetaElement>('meta[property="og:image"]')
-          ?.content;
+        const og = document.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.content;
         let url: string | null = og ?? null;
         if (!url) {
           const lds = document.querySelectorAll<HTMLScriptElement>(
@@ -525,45 +508,44 @@ async function detectAndFetchCoverInPage(): Promise<CoverFetchResult> {
           const response = await fetch(url, { credentials: 'same-origin' });
           if (response.ok) {
             const blob = await response.blob();
-            return await new Promise<
-              { ok: true; dataUrl: string } | { ok: false; error: string }
-            >((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () =>
-                resolve({ ok: true as const, dataUrl: reader.result as string });
-              reader.onerror = () =>
-                resolve({ ok: false as const, error: 'Lecture du blob échouée' });
-              reader.readAsDataURL(blob);
-            });
+            return await new Promise<{ ok: true; dataUrl: string } | { ok: false; error: string }>(
+              (resolve) => {
+                const reader = new FileReader();
+                reader.onload = () =>
+                  resolve({ ok: true as const, dataUrl: reader.result as string });
+                reader.onerror = () =>
+                  resolve({ ok: false as const, error: 'Lecture du blob échouée' });
+                reader.readAsDataURL(blob);
+              },
+            );
           }
         } catch {
           // fall through to canvas strategy
         }
 
         // 3) Stratégie B : <img> + canvas (échoue si serveur sans CORS)
-        return await new Promise<
-          { ok: true; dataUrl: string } | { ok: false; error: string }
-        >((resolve) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => {
-            try {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.naturalWidth;
-              canvas.height = img.naturalHeight;
-              const ctx = canvas.getContext('2d');
-              if (!ctx) return resolve({ ok: false, error: 'Canvas indisponible' });
-              ctx.drawImage(img, 0, 0);
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-              resolve({ ok: true, dataUrl });
-            } catch (e) {
-              resolve({ ok: false, error: (e as Error).message });
-            }
-          };
-          img.onerror = () =>
-            resolve({ ok: false, error: 'Image inaccessible (CORS / 403)' });
-          img.src = url!;
-        });
+        return await new Promise<{ ok: true; dataUrl: string } | { ok: false; error: string }>(
+          (resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return resolve({ ok: false, error: 'Canvas indisponible' });
+                ctx.drawImage(img, 0, 0);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                resolve({ ok: true, dataUrl });
+              } catch (e) {
+                resolve({ ok: false, error: (e as Error).message });
+              }
+            };
+            img.onerror = () => resolve({ ok: false, error: 'Image inaccessible (CORS / 403)' });
+            img.src = url!;
+          },
+        );
       },
     });
     return (res?.result as CoverFetchResult) ?? { ok: false, error: 'Pas de réponse' };

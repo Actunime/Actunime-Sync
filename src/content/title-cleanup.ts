@@ -42,7 +42,8 @@ const NOISE_START_PATTERNS = [
   /\b(?:streaming|stream|en\s+ligne|gratuit(?:ement)?|complet|complete|full|hd|fullhd|4k|1080p|720p|480p)\b/i,
 ];
 
-const SEO_PREFIXES = /^(?:Regarder|Voir|Watch|Lire|Read)\s+(?:gratuitement\s+|en\s+ligne\s+|online\s+|free\s+)?/i;
+const SEO_PREFIXES =
+  /^(?:Regarder|Voir|Watch|Lire|Read)\s+(?:gratuitement\s+|en\s+ligne\s+|online\s+|free\s+)?/i;
 
 /**
  * Suffixe « - SiteName » / « | SiteName » / « · SiteName ». Le segment final
@@ -56,7 +57,8 @@ const SITE_SUFFIX = /\s*[\-|·•–—]\s*[A-Za-z0-9.][^\-|·•–—]{0,30}\s
  * « Y Online », « Z Free »…). Retiré itérativement tant qu'il reste assez
  * de mots avant.
  */
-const TRAILING_NOISE = /\s+(?:manga|manhwa|manhua|webtoon|webcomic|anime|comic|novel|online|free|read|gratuit|gratuitement)\s*[,.]?\s*$/i;
+const TRAILING_NOISE =
+  /\s+(?:manga|manhwa|manhua|webtoon|webcomic|anime|comic|novel|online|free|read|gratuit|gratuitement)\s*[,.]?\s*$/i;
 
 export function cleanScrapedTitle(raw: string): string {
   let t = raw.trim();

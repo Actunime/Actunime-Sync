@@ -67,10 +67,7 @@ export function useSiteActivation(): UseSiteActivationResult {
   // `SiteConfigWizardCard` (qui calcule sa visibilité depuis `state`) ne se
   // parlent pas et il faut fermer/ré-ouvrir le popup pour voir le nouveau state.
   useEffect(() => {
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       if (area !== 'local') return;
       if (!('activatedHosts' in changes)) return;
       void refresh();

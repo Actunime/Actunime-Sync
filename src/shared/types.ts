@@ -68,4 +68,3 @@ export interface LearnedPattern {
   createdAt: string;
   updatedAt: string;
 }
-

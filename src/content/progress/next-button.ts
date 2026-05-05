@@ -7,9 +7,7 @@ export interface NextButtonObserver {
   cleanup: () => void;
 }
 
-export function createNextButtonObserver(
-  opts: NextButtonOptions,
-): NextButtonObserver {
+export function createNextButtonObserver(opts: NextButtonOptions): NextButtonObserver {
   let fired = false;
 
   const handler = (event: Event) => {

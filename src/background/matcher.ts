@@ -1,8 +1,8 @@
-import { api, entityId, type SearchMedia } from "@/shared/api-client";
-import { storage, type MatchingEntry } from "@/shared/storage";
+import { api, entityId, type SearchMedia } from '@/shared/api-client';
+import { storage, type MatchingEntry } from '@/shared/storage';
 
-export type MediaKind = "anime" | "manga";
-export type MediaType = "Anime" | "Manga";
+export type MediaKind = 'anime' | 'manga';
+export type MediaType = 'Anime' | 'Manga';
 
 export interface ScoredMedia {
   media: SearchMedia;
@@ -47,17 +47,12 @@ export function buildSeriesKey(params: {
   slug?: string;
   title?: string;
 }): string {
-  const id =
-    params.seriesId ??
-    params.seriesSlug ??
-    params.slug ??
-    params.title ??
-    "unknown";
+  const id = params.seriesId ?? params.seriesSlug ?? params.slug ?? params.title ?? 'unknown';
   return `${params.siteId}:${id}`;
 }
 
 export function kindToMediaType(kind: MediaKind): MediaType {
-  return kind === "manga" ? "Manga" : "Anime";
+  return kind === 'manga' ? 'Manga' : 'Anime';
 }
 
 function resolveFromCache(entry: MatchingEntry | null): {
@@ -65,7 +60,7 @@ function resolveFromCache(entry: MatchingEntry | null): {
   pending?: PendingMatch;
 } {
   if (!entry || !entry.title) return {};
-  if (entry.kind === "pending") {
+  if (entry.kind === 'pending') {
     return {
       pending: {
         listEntryId: entry.listEntryId,
@@ -75,7 +70,7 @@ function resolveFromCache(entry: MatchingEntry | null): {
       },
     };
   }
-  if (entry.kind === "media") {
+  if (entry.kind === 'media') {
     return {
       cached: {
         mediaId: entry.mediaId,
@@ -167,7 +162,7 @@ export async function matchTitle(params: {
   kind?: MediaKind;
 }): Promise<MatchTitleResult> {
   const seriesKey = buildSeriesKey(params);
-  const kind: MediaKind = params.kind ?? "anime";
+  const kind: MediaKind = params.kind ?? 'anime';
 
   const cacheEntry = await storage.getMatching(seriesKey);
   const fromCache = resolveFromCache(cacheEntry);
@@ -186,9 +181,7 @@ export async function matchTitle(params: {
 }
 
 export function pickDisplayTitle(media: SearchMedia): string | undefined {
-  return (
-    media.title?.normal ?? media.title?.original ?? media.title?.alias?.[0]
-  );
+  return media.title?.normal ?? media.title?.original ?? media.title?.alias?.[0];
 }
 
 function fuzzyTitleMatch(detected: string, candidate: string): boolean {
@@ -203,24 +196,15 @@ function fuzzyTitleMatch(detected: string, candidate: string): boolean {
 
 function cleanTitle(title: string): string {
   return title
-    .replace(
-      /\s*-?\s*(?:episode|ep|épisode|ep\.|chapter|chapitre|chap|ch|ch\.)\s*\d.*$/i,
-      "",
-    )
-    .replace(/\s+/g, " ")
+    .replace(/\s*-?\s*(?:episode|ep|épisode|ep\.|chapter|chapitre|chap|ch|ch\.)\s*\d.*$/i, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
-function scoreCandidate(
-  query: string,
-  media: SearchMedia,
-  season?: number,
-): ScoredMedia {
-  const titles = [
-    media.title?.original,
-    media.title?.normal,
-    ...(media.title?.alias ?? []),
-  ].filter(Boolean) as string[];
+function scoreCandidate(query: string, media: SearchMedia, season?: number): ScoredMedia {
+  const titles = [media.title?.original, media.title?.normal, ...(media.title?.alias ?? [])].filter(
+    Boolean,
+  ) as string[];
   if (titles.length === 0) return { media, score: 0 };
 
   const baseScore = Math.max(...titles.map((c) => similarity(query, c)));
@@ -236,10 +220,9 @@ function scoreCandidate(
 function seasonMatchBoost(titles: string[], season: number): number {
   const explicit = new RegExp(
     `\\b(?:season|saison|s)\\s*${season}\\b|\\b${season}(?:nd|rd|th|st)?\\s+season\\b|\\s${season}$`,
-    "i",
+    'i',
   );
-  const hasAnySeasonHint = (t: string) =>
-    /\b(?:season|saison)\s*\d+\b|\bs\d+\b|\s\d+$/i.test(t);
+  const hasAnySeasonHint = (t: string) => /\b(?:season|saison)\s*\d+\b|\bs\d+\b|\s\d+$/i.test(t);
 
   if (season === 1) {
     return titles.some((t) => !hasAnySeasonHint(t)) ? SEASON_BOOST : 0;
@@ -259,9 +242,9 @@ function similarity(a: string, b: string): number {
 function normalize(s: string): string {
   return s
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^\w\s]/g, "")
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^\w\s]/g, '')
     .trim();
 }
 
@@ -270,19 +253,13 @@ function levenshtein(a: string, b: string): number {
   const n = b.length;
   if (m === 0) return n;
   if (n === 0) return m;
-  const dp = Array.from({ length: m + 1 }, () =>
-    new Array<number>(n + 1).fill(0),
-  );
+  const dp = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0));
   for (let i = 0; i <= m; i++) dp[i][0] = i;
   for (let j = 0; j <= n; j++) dp[0][j] = j;
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost,
-      );
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
     }
   }
   return dp[m][n];

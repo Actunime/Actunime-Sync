@@ -35,7 +35,7 @@ export function runJsonLdStrategy(): StrategyResult {
     id: 'jsonld',
     label: 'Données structurées (JSON-LD)',
     description:
-      "Lit les balises <script type=\"application/ld+json\"> schema.org. Le plus fiable si le site les expose (TVEpisode, Movie, VideoObject).",
+      'Lit les balises <script type="application/ld+json"> schema.org. Le plus fiable si le site les expose (TVEpisode, Movie, VideoObject).',
     confidence: 0,
   };
 

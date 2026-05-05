@@ -6,7 +6,7 @@ export function runDocumentTitleStrategy(): StrategyResult {
     id: 'document-title',
     label: 'Titre de la page',
     description:
-      "Lit `<title>` et reconnaît les motifs « Ch. N », « Chapter N », « Episode N », « Vol. N Ch. M », « sXXeYY ».",
+      'Lit `<title>` et reconnaît les motifs « Ch. N », « Chapter N », « Episode N », « Vol. N Ch. M », « sXXeYY ».',
     confidence: 0,
   };
 

@@ -37,10 +37,7 @@ export function useConfigWizard(host: string | null): UseConfigWizardResult {
 
   // Réagit aux changements de storage (sauvegarde depuis le wizard pendant que le popup est ouvert).
   useEffect(() => {
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       if (area !== 'local' || !host) return;
       if (!('learnedPatterns' in changes)) return;
       const next = (changes.learnedPatterns.newValue ?? {}) as Record<string, LearnedPattern>;

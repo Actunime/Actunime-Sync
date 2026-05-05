@@ -64,14 +64,19 @@ export function detectGenericFromDom(): GenericDetection | null {
   const isMangaReader = looksLikeMangaReader();
 
   if (kind === 'anime' && !hasValidVideo && !hasCrossOriginIframe) return null;
-  if (kind === 'manga' && !isMangaReader && !URL_TOKENS_MANGA.test(location.pathname) && !ld.matched) {
+  if (
+    kind === 'manga' &&
+    !isMangaReader &&
+    !URL_TOKENS_MANGA.test(location.pathname) &&
+    !ld.matched
+  ) {
     return null;
   }
 
   if (score < SCORE_THRESHOLD) return null;
 
   let title = ld.title;
-  let seriesTitle = ld.seriesTitle;
+  const seriesTitle = ld.seriesTitle;
   if (!title && ogTitle) title = ogTitle;
   if (!title) title = document.title || undefined;
   if (!title) return null;
@@ -84,7 +89,7 @@ export function detectGenericFromDom(): GenericDetection | null {
     title: cleanedSeries ?? cleanedTitle,
     seriesTitle: cleanedSeries,
     episode: kind === 'anime' ? ld.episode : undefined,
-    chapter: kind === 'manga' ? ld.chapter ?? ld.episode : undefined,
+    chapter: kind === 'manga' ? (ld.chapter ?? ld.episode) : undefined,
     season: ld.season,
     imageUrl: ld.imageUrl ?? ogImage,
     kind,
@@ -222,7 +227,11 @@ function matchMediaLd(item: Record<string, unknown>, into: JsonLdResult): boolea
   const seasonNum = partOfSeason?.seasonNumber;
   if (typeof seasonNum === 'number' && Number.isFinite(seasonNum) && into.season === undefined) {
     into.season = seasonNum;
-  } else if (typeof seasonNum === 'string' && /^\d+$/.test(seasonNum) && into.season === undefined) {
+  } else if (
+    typeof seasonNum === 'string' &&
+    /^\d+$/.test(seasonNum) &&
+    into.season === undefined
+  ) {
     into.season = Number(seasonNum);
   }
 

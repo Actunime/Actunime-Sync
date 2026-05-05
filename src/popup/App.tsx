@@ -49,9 +49,8 @@ export function App() {
 
   // Demande de contribution venue de la card in-page (overlay) : on pré-charge
   // le form au lieu d'afficher le popup normal. Consommée à submit/annul.
-  const [pendingContribution, setPendingContribution] = useState<
-    Awaited<ReturnType<typeof storage.getPendingContribution>>
-  >(null);
+  const [pendingContribution, setPendingContribution] =
+    useState<Awaited<ReturnType<typeof storage.getPendingContribution>>>(null);
   const [pendingChecked, setPendingChecked] = useState(false);
   const [pendingSuccess, setPendingSuccess] = useState<{
     kind: 'anime' | 'manga';
@@ -85,9 +84,7 @@ export function App() {
       setActionState('idle');
     } catch (err) {
       const message =
-        err instanceof AuthFlowError
-          ? err.message
-          : (err as Error)?.message ?? 'Erreur inconnue';
+        err instanceof AuthFlowError ? err.message : ((err as Error)?.message ?? 'Erreur inconnue');
       setErrorMessage(message);
       setActionState('error');
     }
@@ -114,9 +111,7 @@ export function App() {
         />
         <div className="flex-1">
           <h1 className="text-base font-semibold">Actunime Sync</h1>
-          <p className="text-xs text-muted-foreground">
-            v{chrome.runtime.getManifest().version}
-          </p>
+          <p className="text-xs text-muted-foreground">v{chrome.runtime.getManifest().version}</p>
         </div>
       </header>
 
@@ -132,7 +127,8 @@ export function App() {
       {!loading && !auth && (
         <section className="flex flex-col gap-3">
           <div className="text-sm text-muted-foreground">
-            Synchronise tes épisodes vus sur les sites de streaming compatibles avec ta liste Actunime.
+            Synchronise tes épisodes vus sur les sites de streaming compatibles avec ta liste
+            Actunime.
           </div>
           <button
             onClick={handleSignIn}
@@ -194,11 +190,7 @@ export function App() {
             className="group flex items-center gap-3 rounded-md border border-border bg-muted/20 hover:bg-muted/40 p-3 text-left transition-colors"
           >
             {auth.user.avatarUrl ? (
-              <img
-                src={auth.user.avatarUrl}
-                alt=""
-                className="size-10 rounded-full object-cover"
-              />
+              <img src={auth.user.avatarUrl} alt="" className="size-10 rounded-full object-cover" />
             ) : (
               <div className="size-10 rounded-full bg-muted flex items-center justify-center">
                 <User className="size-5 text-muted-foreground" />
@@ -214,9 +206,21 @@ export function App() {
           </button>
 
           <div className="grid grid-cols-2 gap-2">
-            <QuickAction icon={List} label="Mes animes" onClick={() => openWebUrl('/profile/animes')} />
-            <QuickAction icon={BookOpen} label="Mes mangas" onClick={() => openWebUrl('/profile/mangas')} />
-            <QuickAction icon={ThumbsUp} label="Propositions" onClick={() => openWebUrl('/propositions')} />
+            <QuickAction
+              icon={List}
+              label="Mes animes"
+              onClick={() => openWebUrl('/profile/animes')}
+            />
+            <QuickAction
+              icon={BookOpen}
+              label="Mes mangas"
+              onClick={() => openWebUrl('/profile/mangas')}
+            />
+            <QuickAction
+              icon={ThumbsUp}
+              label="Propositions"
+              onClick={() => openWebUrl('/propositions')}
+            />
             <QuickAction icon={Globe} label="Découvrir" onClick={() => openWebUrl('/')} />
           </div>
 
@@ -268,8 +272,8 @@ function UpdateBanner() {
         <div className="text-xs leading-relaxed">
           <strong className="text-foreground">Mise à jour disponible</strong>{' '}
           <span className="text-muted-foreground">
-            Actunime Sync {info.latestVersion} est sortie. La version actuelle ne se met pas à
-            jour automatiquement — télécharge la nouvelle version pour profiter des dernières
+            Actunime Sync {info.latestVersion} est sortie. La version actuelle ne se met pas à jour
+            automatiquement — télécharge la nouvelle version pour profiter des dernières
             améliorations.
           </span>
         </div>
@@ -371,9 +375,9 @@ function SiteActivationCard() {
       <div className="flex items-start gap-2">
         <Globe className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" />
         <div className="text-xs text-muted-foreground leading-relaxed">
-          Ajoute <strong className="text-foreground">{host}</strong> à ta liste de sites
-          suivis. L'assistant de configuration s'ouvrira directement après pour identifier
-          le titre et le numéro dans la page.
+          Ajoute <strong className="text-foreground">{host}</strong> à ta liste de sites suivis.
+          L'assistant de configuration s'ouvrira directement après pour identifier le titre et le
+          numéro dans la page.
         </div>
       </div>
       <button
@@ -381,11 +385,7 @@ function SiteActivationCard() {
         disabled={activating}
         className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
-        {activating ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : (
-          <Plus className="size-3.5" />
-        )}
+        {activating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
         Ajouter et configurer ce site
       </button>
       {lastResult?.denied && (
@@ -401,8 +401,8 @@ function SiteActivationCard() {
         </p>
       )}
       <p className="text-[10px] text-muted-foreground leading-snug">
-        Chrome te demandera l'autorisation. Tu peux la révoquer à tout moment depuis les
-        paramètres de l'extension.
+        Chrome te demandera l'autorisation. Tu peux la révoquer à tout moment depuis les paramètres
+        de l'extension.
       </p>
     </div>
   );
@@ -424,8 +424,7 @@ function CurrentDetectionCard() {
       <div className="rounded-md border border-border bg-muted/10 p-3 flex items-start gap-2 text-xs">
         <EyeOff className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" />
         <div className="text-muted-foreground">
-          Aucune série détectée sur cet onglet. Ouvre un épisode sur un site
-          configuré.
+          Aucune série détectée sur cet onglet. Ouvre un épisode sur un site configuré.
         </div>
       </div>
     );
@@ -446,9 +445,7 @@ function DetectedAnimeCard({
   const { match, loading: matchLoading } = useMatchedAnime(detection);
   const { state: tracking, marking, markAsWatched } = useTrackingState();
   const [contributing, setContributing] = useState(false);
-  const [contributedFlash, setContributedFlash] = useState<
-    null | 'created' | 'joined'
-  >(null);
+  const [contributedFlash, setContributedFlash] = useState<null | 'created' | 'joined'>(null);
   const [markedFlash, setMarkedFlash] = useState<'idle' | 'ok' | 'error'>('idle');
 
   const handleMarkAsWatched = async () => {
@@ -544,23 +541,18 @@ function DetectedAnimeCard({
 
           {(isManga ? detection.chapter : detection.episode) !== undefined && (
             <p className="text-xs text-muted-foreground mt-auto">
-              {isManga
-                ? `Chapitre ${detection.chapter}`
-                : `Épisode ${detection.episode}`}
-              {!isManga && detection.season !== undefined
-                ? ` · Saison ${detection.season}`
-                : ''}
+              {isManga ? `Chapitre ${detection.chapter}` : `Épisode ${detection.episode}`}
+              {!isManga && detection.season !== undefined ? ` · Saison ${detection.season}` : ''}
             </p>
           )}
         </div>
       </div>
 
-
       {notInActunime ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted-foreground leading-snug">
-            Cette œuvre n'est pas (encore) référencée sur Actunime. Propose-la pour qu'elle
-            soit ajoutée et trackée à l'avenir.
+            Cette œuvre n'est pas (encore) référencée sur Actunime. Propose-la pour qu'elle soit
+            ajoutée et trackée à l'avenir.
           </p>
           <button
             onClick={() => setContributing(true)}
@@ -647,9 +639,7 @@ function TrackingFooter({
     const minutes = Math.floor(cumulativeMs / 60_000);
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-xs text-muted-foreground">
-          Tracking via audio · {minutes} min cumulées
-        </p>
+        <p className="text-xs text-muted-foreground">Tracking via audio · {minutes} min cumulées</p>
         {engagementReached ? (
           <button
             onClick={onMarkAsWatched}
@@ -665,16 +655,15 @@ function TrackingFooter({
           </button>
         ) : (
           <p className="text-[10px] text-muted-foreground italic">
-            L'épisode sera marqué vu automatiquement. Pour anticiper, le bouton apparaîtra après ~10 min.
+            L'épisode sera marqué vu automatiquement. Pour anticiper, le bouton apparaîtra après ~10
+            min.
           </p>
         )}
       </div>
     );
   }
 
-  return (
-    <p className="text-xs text-muted-foreground italic">En attente de la lecture…</p>
-  );
+  return <p className="text-xs text-muted-foreground italic">En attente de la lecture…</p>;
 }
 
 /**
@@ -691,7 +680,8 @@ function ApiHealthBanner() {
         <div className="text-xs leading-relaxed">
           <strong className="text-destructive">Serveur Actunime indisponible.</strong>{' '}
           <span className="text-muted-foreground">
-            Vérifie ta connexion ou réessaie dans quelques instants. Le tracking ne marchera pas tant que le serveur ne répond pas.
+            Vérifie ta connexion ou réessaie dans quelques instants. Le tracking ne marchera pas
+            tant que le serveur ne répond pas.
           </span>
         </div>
       </div>
@@ -727,13 +717,12 @@ function SiteConfigWizardCard() {
       <div className="rounded-md border border-border bg-muted/10 p-3 flex flex-col gap-2">
         <div className="flex items-center gap-2 text-xs">
           <Settings2 className="size-3.5 text-muted-foreground" />
-          <span className="font-medium text-muted-foreground">
-            Configuration personnalisée
-          </span>
+          <span className="font-medium text-muted-foreground">Configuration personnalisée</span>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Stratégie active : <strong className="text-foreground">{strategyLabel(pattern.strategy)}</strong>.
-          Détection sur <strong className="text-foreground">{host}</strong>.
+          Stratégie active :{' '}
+          <strong className="text-foreground">{strategyLabel(pattern.strategy)}</strong>. Détection
+          sur <strong className="text-foreground">{host}</strong>.
         </p>
         <div className="flex gap-2">
           <button
@@ -748,7 +737,11 @@ function SiteConfigWizardCard() {
             disabled={removing}
             className="inline-flex items-center justify-center gap-1.5 rounded-md border border-destructive/30 bg-transparent px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
           >
-            {removing ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+            {removing ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="size-3.5" />
+            )}
             Retirer
           </button>
         </div>
@@ -764,8 +757,8 @@ function SiteConfigWizardCard() {
           <strong className="text-foreground">Site non configuré.</strong>{' '}
           <span className="text-muted-foreground">
             La détection automatique peut être imprécise sur{' '}
-            <strong className="text-foreground">{host}</strong>. Lance l'assistant pour
-            choisir la bonne stratégie ou pointer toi-même les éléments du DOM.
+            <strong className="text-foreground">{host}</strong>. Lance l'assistant pour choisir la
+            bonne stratégie ou pointer toi-même les éléments du DOM.
           </span>
         </div>
       </div>
@@ -777,8 +770,8 @@ function SiteConfigWizardCard() {
         Configurer ce site
       </button>
       <p className="text-[10px] text-muted-foreground leading-snug">
-        La configuration reste sur ton ordinateur. Tu peux la partager via Export/Import
-        depuis les paramètres.
+        La configuration reste sur ton ordinateur. Tu peux la partager via Export/Import depuis les
+        paramètres.
       </p>
     </div>
   );
@@ -791,7 +784,7 @@ function strategyLabel(strategy: string): string {
     case 'og':
       return 'Open Graph';
     case 'url-tokens':
-      return "URL tokens";
+      return 'URL tokens';
     case 'document-title':
       return 'Titre de la page';
     case 'dom-selectors':
@@ -810,9 +803,7 @@ function AnimePoster({ src, loading }: Readonly<{ src?: string | null; loading: 
   return (
     <div className="size-16 rounded-md bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden relative">
       {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
-      {!loading && (!src || errored) && (
-        <ImageOff className="size-5 text-muted-foreground" />
-      )}
+      {!loading && (!src || errored) && <ImageOff className="size-5 text-muted-foreground" />}
       {showImage && (
         <img
           src={src}

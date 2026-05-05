@@ -8,10 +8,7 @@ export function useUpdateInfo(): UpdateInfo | null {
     void chrome.storage.local.get('updateInfo').then((r) => {
       setInfo((r as { updateInfo?: UpdateInfo }).updateInfo ?? null);
     });
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       if (area !== 'local' || !('updateInfo' in changes)) return;
       setInfo((changes.updateInfo.newValue as UpdateInfo | undefined) ?? null);
     };

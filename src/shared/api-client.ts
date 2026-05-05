@@ -4,7 +4,7 @@
  * `@actunime/client` (trop lourd à cause de socket.io-client ~40 KB gzipped).
  */
 
-import { storage } from "./storage";
+import { storage } from './storage';
 
 export class ApiError extends Error {
   constructor(
@@ -13,14 +13,14 @@ export class ApiError extends Error {
     public data?: unknown,
   ) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
   }
 }
 
-import { API_URL } from "./config";
+import { API_URL } from './config';
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   body?: unknown;
   auth?: boolean; // true = include Bearer token from storage
   signal?: AbortSignal;
@@ -32,14 +32,11 @@ interface RequestOptions {
  */
 export const API_NETWORK_ERROR_STATUS = 0;
 
-async function request<T>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> {
-  const { method = "GET", body, auth = true, signal } = options;
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { method = 'GET', body, auth = true, signal } = options;
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
 
   if (auth) {
@@ -51,30 +48,21 @@ async function request<T>(
 
   let response: Response;
   try {
-    response = await fetch(
-      `${API_URL}${path.startsWith("/") ? path : `/${path}`}`,
-      {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-        signal,
-      },
-    );
+    response = await fetch(`${API_URL}${path.startsWith('/') ? path : `/${path}`}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal,
+    });
   } catch (err) {
     // `TypeError: Failed to fetch` → DNS, serveur down, mixed content, CORS rejet.
     // `AbortError` → timeout user (signal abort).
-    if (err instanceof DOMException && err.name === "AbortError") {
-      throw new ApiError(
-        API_NETWORK_ERROR_STATUS,
-        "Requête annulée",
-        undefined,
-      );
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(API_NETWORK_ERROR_STATUS, 'Requête annulée', undefined);
     }
-    throw new ApiError(
-      API_NETWORK_ERROR_STATUS,
-      "Serveur Actunime inaccessible",
-      { cause: (err as Error)?.message },
-    );
+    throw new ApiError(API_NETWORK_ERROR_STATUS, 'Serveur Actunime inaccessible', {
+      cause: (err as Error)?.message,
+    });
   }
 
   if (!response.ok) {
@@ -85,8 +73,7 @@ async function request<T>(
       data = undefined;
     }
     const message =
-      (data as { message?: string })?.message ??
-      `HTTP ${response.status} ${response.statusText}`;
+      (data as { message?: string })?.message ?? `HTTP ${response.status} ${response.statusText}`;
 
     // Expiration du token : nettoyage auto côté extension.
     if (response.status === 401 && auth) {
@@ -127,7 +114,7 @@ export interface SearchMedia {
 export interface ListEntry {
   id?: string;
   _id?: string;
-  mediaType: "Anime" | "Manga";
+  mediaType: 'Anime' | 'Manga';
   /** Vide quand l'entry pointe vers une proposition en attente. */
   mediaId?: string | null;
   proposalId?: string | null;
@@ -144,9 +131,7 @@ export interface ListEntry {
 }
 
 /** Helper : retourne l'ID effectif quel que soit le schéma de l'API. */
-export function entityId(
-  e: { id?: string; _id?: string } | null | undefined,
-): string | undefined {
+export function entityId(e: { id?: string; _id?: string } | null | undefined): string | undefined {
   return e?.id ?? e?._id;
 }
 
@@ -162,7 +147,7 @@ export const api = {
    */
   async checkHealth(): Promise<boolean> {
     try {
-      await request<unknown>("/maintenance/health/public", { auth: false });
+      await request<unknown>('/maintenance/health/public', { auth: false });
       return true;
     } catch {
       return false;
@@ -184,8 +169,8 @@ export const api = {
         avatarUrl?: string | null;
         roles: string[];
       };
-    }>("/auth/extension/exchange", {
-      method: "POST",
+    }>('/auth/extension/exchange', {
+      method: 'POST',
       body: { code },
       auth: false,
     });
@@ -196,7 +181,7 @@ export const api = {
    */
   revokeToken(jti: string) {
     return request<{ success: boolean }>(`/auth/extension/tokens/${jti}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
   },
 
@@ -208,14 +193,14 @@ export const api = {
    * Utilise `POST /animes` ou `POST /mangas` avec `query.search`. Plus efficace
    * que la recherche multi-entités sur les sites avec un seul kind.
    */
-  searchByKind(kind: "anime" | "manga", search: string, limit = 10) {
-    const path = kind === "manga" ? "/mangas" : "/animes";
+  searchByKind(kind: 'anime' | 'manga', search: string, limit = 10) {
+    const path = kind === 'manga' ? '/mangas' : '/animes';
     console.log(`[Actunime] searchByKind ${kind} ${search} ${limit}`);
     return request<{
       results?: SearchMedia[];
       data?: SearchMedia[];
     }>(path, {
-      method: "POST",
+      method: 'POST',
       body: { query: { search }, limit, page: 1 },
     }).then((res) => res.results ?? res.data ?? []);
   },
@@ -225,19 +210,19 @@ export const api = {
    * que l'extension propose à l'user de rejoindre une proposition existante
    * avant d'en créer une nouvelle.
    */
-  searchPendingProposals(kind: "anime" | "manga", search: string, limit = 5) {
-    const entityType = kind === "manga" ? "Manga" : "Anime";
+  searchPendingProposals(kind: 'anime' | 'manga', search: string, limit = 5) {
+    const entityType = kind === 'manga' ? 'Manga' : 'Anime';
     console.log(`[Actunime] searchPendingProposals ${kind} ${search} ${limit}`);
     return request<{
       results?: PendingProposal[];
       data?: PendingProposal[];
-    }>("/proposals/paginate", {
-      method: "POST",
+    }>('/proposals/paginate', {
+      method: 'POST',
       body: {
         query: {
           search,
-          status: "PENDING",
-          mode: "CREATION",
+          status: 'PENDING',
+          mode: 'CREATION',
           entityType,
         },
         limit,
@@ -263,7 +248,7 @@ export const api = {
    * l'user sans repasser par `/search/global`.
    */
   getPendingListEntries() {
-    return request<ListEntry[]>("/lists/pending");
+    return request<ListEntry[]>('/lists/pending');
   },
 
   /**
@@ -271,15 +256,10 @@ export const api = {
    */
   updateListEntry(
     id: string,
-    patch: Partial<
-      Pick<
-        ListEntry,
-        "episodesWatched" | "chaptersRead" | "status" | "rewatchCount"
-      >
-    >,
+    patch: Partial<Pick<ListEntry, 'episodesWatched' | 'chaptersRead' | 'status' | 'rewatchCount'>>,
   ) {
     return request<ListEntry>(`/lists/${id}`, {
-      method: "PUT",
+      method: 'PUT',
       body: patch,
     });
   },
@@ -289,14 +269,14 @@ export const api = {
    */
   createListEntry(body: {
     mediaId: string;
-    mediaType: "Anime" | "Manga";
+    mediaType: 'Anime' | 'Manga';
     status?: string;
     episodesWatched?: number;
     chaptersRead?: number;
   }) {
-    const defaultStatus = body.mediaType === "Manga" ? "READING" : "WATCHING";
-    return request<ListEntry>("/lists/create", {
-      method: "POST",
+    const defaultStatus = body.mediaType === 'Manga' ? 'READING' : 'WATCHING';
+    return request<ListEntry>('/lists/create', {
+      method: 'POST',
       body: { status: defaultStatus, ...body },
     });
   },
@@ -306,7 +286,7 @@ export const api = {
    * nouvelle entrée).
    */
   deleteListEntry(id: string) {
-    return request<void>(`/lists/${id}`, { method: "DELETE" });
+    return request<void>(`/lists/${id}`, { method: 'DELETE' });
   },
 
   /**
@@ -340,11 +320,11 @@ export const api = {
     status: string;
     poster: { file: string; type: string };
   }) {
-    return request<{ id: string }>("/proposals", {
-      method: "POST",
+    return request<{ id: string }>('/proposals', {
+      method: 'POST',
       body: {
-        mode: "CREATION",
-        entityType: "Anime",
+        mode: 'CREATION',
+        entityType: 'Anime',
         mainDependency: body,
         dependencies: [],
         mediaRelations: [],
@@ -361,11 +341,11 @@ export const api = {
     status: string;
     poster: { file: string; type: string };
   }) {
-    return request<{ id: string }>("/proposals", {
-      method: "POST",
+    return request<{ id: string }>('/proposals', {
+      method: 'POST',
       body: {
-        mode: "CREATION",
-        entityType: "Manga",
+        mode: 'CREATION',
+        entityType: 'Manga',
         mainDependency: body,
         dependencies: [],
         mediaRelations: [],
@@ -380,14 +360,14 @@ export const api = {
    */
   createListEntryFromProposal(body: {
     proposalId: string;
-    mediaType: "Anime" | "Manga";
+    mediaType: 'Anime' | 'Manga';
     status?: string;
     preview: { title: string; coverImage?: string };
     episodesWatched?: number;
     chaptersRead?: number;
   }) {
-    return request<ListEntry>("/lists/from-proposal", {
-      method: "POST",
+    return request<ListEntry>('/lists/from-proposal', {
+      method: 'POST',
       body,
     });
   },

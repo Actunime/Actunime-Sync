@@ -35,7 +35,7 @@ export function runDomSelectorsStrategy(): StrategyResult {
     id: 'dom-selectors',
     label: 'Sélecteurs DOM génériques',
     description:
-      "Cherche un titre dans des sélecteurs CSS courants (h1, .player-title, document.title). Imprécis — sert de dernier recours.",
+      'Cherche un titre dans des sélecteurs CSS courants (h1, .player-title, document.title). Imprécis — sert de dernier recours.',
     confidence: 0,
   };
 
@@ -99,7 +99,7 @@ export function runDomSelectorsStrategy(): StrategyResult {
     }
   }
 
-  if (!cleanedTitle) return { ...base, evidence: 'Aucun sélecteur DOM courant n\'a matché.' };
+  if (!cleanedTitle) return { ...base, evidence: "Aucun sélecteur DOM courant n'a matché." };
 
   let confidence = 0.25; // base : on a au moins un titre
   if (episode !== undefined) confidence += 0.3;

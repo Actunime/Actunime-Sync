@@ -41,9 +41,7 @@ export function serializePatterns(patterns: LearnedPattern[]): string {
   return JSON.stringify(payload, null, 2);
 }
 
-export type ParseResult =
-  | { ok: true; patterns: LearnedPattern[] }
-  | { ok: false; error: string };
+export type ParseResult = { ok: true; patterns: LearnedPattern[] } | { ok: false; error: string };
 
 /**
  * Parse + valide un JSON exporté. Tolérant : on ignore les patterns invalides
@@ -191,10 +189,7 @@ export interface ImportDiff {
   conflicts: LearnedPattern[];
 }
 
-export function diffImport(
-  incoming: LearnedPattern[],
-  existing: LearnedPattern[],
-): ImportDiff {
+export function diffImport(incoming: LearnedPattern[], existing: LearnedPattern[]): ImportDiff {
   const existingHosts = new Set(existing.map((p) => p.host));
   const fresh: LearnedPattern[] = [];
   const conflicts: LearnedPattern[] = [];

@@ -12,7 +12,7 @@ export function runOgStrategy(): StrategyResult {
     id: 'og',
     label: 'Open Graph (meta tags)',
     description:
-      "Lit <meta property=\"og:title\" / og:type>. Présent sur la majorité des sites de streaming.",
+      'Lit <meta property="og:title" / og:type>. Présent sur la majorité des sites de streaming.',
     confidence: 0,
   };
 
@@ -20,13 +20,11 @@ export function runOgStrategy(): StrategyResult {
   const ogType = readMeta('og:type');
   if (!ogTitle) return base;
 
-  const evidence = [
-    ogType ? `og:type = ${ogType}` : null,
-    `og:title = ${ogTitle}`,
-  ]
+  const evidence = [ogType ? `og:type = ${ogType}` : null, `og:title = ${ogTitle}`]
     .filter(Boolean)
     .join('\n');
 
+  // eslint-disable-next-line prefer-const
   let { episode, season, cleanedTitle: parseStripped } = parseEpisodeSeasonFromTitle(ogTitle);
   let cleanedTitle = parseStripped ? cleanScrapedTitle(parseStripped) : undefined;
 
@@ -44,10 +42,7 @@ export function runOgStrategy(): StrategyResult {
   if (episode !== undefined) confidence += 0.25;
   if (season !== undefined) confidence += 0.1;
   // og:type vidéo = bonus de confiance
-  if (
-    ogType &&
-    ['video.episode', 'video.tv_show', 'video.movie', 'video.other'].includes(ogType)
-  ) {
+  if (ogType && ['video.episode', 'video.tv_show', 'video.movie', 'video.other'].includes(ogType)) {
     confidence += 0.15;
   }
 

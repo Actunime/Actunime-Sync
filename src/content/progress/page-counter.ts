@@ -9,9 +9,7 @@ export interface PageCounterObserver {
 
 const COUNTER_REGEX = /(\d+)\s*\/\s*(\d+)/;
 
-export function createPageCounterObserver(
-  opts: PageCounterOptions,
-): PageCounterObserver {
+export function createPageCounterObserver(opts: PageCounterOptions): PageCounterObserver {
   let fired = false;
   let observer: MutationObserver | null = null;
 

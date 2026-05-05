@@ -91,7 +91,8 @@ export function runUrlTokensStrategy(): StrategyResult {
   const base: StrategyResult = {
     id: 'url-tokens',
     label: "Tokens dans l'URL",
-    description: "Cherche des motifs comme /watch/, /episode-N, /saison-S/episode-N, sXeY dans le chemin.",
+    description:
+      'Cherche des motifs comme /watch/, /episode-N, /saison-S/episode-N, sXeY dans le chemin.',
     confidence: 0,
   };
 
@@ -147,7 +148,10 @@ function slugToTitle(slug: string, episode?: number): string | undefined {
     .replace(/-(?:episode|ep|épisode|chapter|chapitre|ch)[-.]?\d+.*$/i, '')
     .replace(/-e\d+.*$/i, '')
     .replace(/-s\d+.*$/i, '');
-  const out = cleaned.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).trim();
+  const out = cleaned
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
   return out || undefined;
 }
 

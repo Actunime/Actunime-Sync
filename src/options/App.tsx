@@ -60,9 +60,7 @@ function LearnedPatternsSection() {
     const res = (await sendMessage({
       type: 'LIST_LEARNED_PATTERNS',
     })) as ListLearnedPatternsResultPayload;
-    setPatterns(
-      res.patterns.sort((a, b) => (b.updatedAt < a.updatedAt ? -1 : 1)),
-    );
+    setPatterns(res.patterns.sort((a, b) => (b.updatedAt < a.updatedAt ? -1 : 1)));
   }, []);
 
   useEffect(() => {
@@ -71,10 +69,7 @@ function LearnedPatternsSection() {
 
   // Synchronise si l'user retire un pattern depuis le popup pendant la consultation.
   useEffect(() => {
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       if (area !== 'local' || !('learnedPatterns' in changes)) return;
       void refresh();
     };
@@ -110,8 +105,8 @@ function LearnedPatternsSection() {
         <div>
           <h2 className="text-lg font-semibold">Sites configurés</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Patterns d'apprentissage créés via l'assistant de configuration. Stockés
-            uniquement sur ton ordinateur — jamais transmis à Actunime.
+            Patterns d'apprentissage créés via l'assistant de configuration. Stockés uniquement sur
+            ton ordinateur — jamais transmis à Actunime.
           </p>
         </div>
         {patterns && patterns.length > 0 && (
@@ -133,8 +128,8 @@ function LearnedPatternsSection() {
 
       {patterns && patterns.length === 0 && (
         <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Aucune configuration personnalisée. Sur un site supporté, ouvre le popup
-          et clique « Configurer ce site » pour lancer l'assistant.
+          Aucune configuration personnalisée. Sur un site supporté, ouvre le popup et clique «
+          Configurer ce site » pour lancer l'assistant.
         </div>
       )}
 
@@ -263,9 +258,7 @@ function ImportLearnedPatterns({
         });
       }
       const total = preview.raw.length;
-      setSuccess(
-        `${total} configuration${total > 1 ? 's' : ''} importée${total > 1 ? 's' : ''}.`,
-      );
+      setSuccess(`${total} configuration${total > 1 ? 's' : ''} importée${total > 1 ? 's' : ''}.`);
       setPreview(null);
       await onImported();
     } catch (err) {
@@ -288,8 +281,8 @@ function ImportLearnedPatterns({
           Importer une configuration
         </h3>
         <p className="text-xs text-muted-foreground mt-1">
-          Charge un fichier <code>.json</code> exporté par toi ou par un autre utilisateur.
-          Les sites déjà configurés seront remplacés par la version importée.
+          Charge un fichier <code>.json</code> exporté par toi ou par un autre utilisateur. Les
+          sites déjà configurés seront remplacés par la version importée.
         </p>
       </div>
 
@@ -362,7 +355,8 @@ function ImportLearnedPatterns({
               <li key={p.host} className="flex items-center gap-2">
                 <AlertCircle className="size-3 text-amber-500 flex-shrink-0" />
                 <span className="truncate">
-                  <strong className="text-foreground">{p.host}</strong> — remplacera la version actuelle
+                  <strong className="text-foreground">{p.host}</strong> — remplacera la version
+                  actuelle
                 </span>
               </li>
             ))}
@@ -423,9 +417,9 @@ function ActivatedHostsSection() {
       <div>
         <h2 className="text-lg font-semibold">Sites activés</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Sites où tu as autorisé Actunime à lire les pages pour détecter ce que tu regardes.
-          Les sites listés dans le manifest (Crunchyroll, ADN, Netflix, Prime, Disney+) sont
-          actifs par défaut et n'apparaissent pas ici.
+          Sites où tu as autorisé Actunime à lire les pages pour détecter ce que tu regardes. Les
+          sites listés dans le manifest (Crunchyroll, ADN, Netflix, Prime, Disney+) sont actifs par
+          défaut et n'apparaissent pas ici.
         </p>
       </div>
 
@@ -437,8 +431,8 @@ function ActivatedHostsSection() {
 
       {hosts && hosts.length === 0 && (
         <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Aucun site activé manuellement. Visite un site de streaming non couvert et
-          clique « Activer Actunime sur ce site » dans le popup pour l'ajouter.
+          Aucun site activé manuellement. Visite un site de streaming non couvert et clique «
+          Activer Actunime sur ce site » dans le popup pour l'ajouter.
         </div>
       )}
 

@@ -124,7 +124,13 @@ export type TrackResultPayload =
  * `RESOLVE_BEHIND` pour appliquer le choix côté tracker.
  */
 export type BehindResolution =
-  | { action: 'regress'; seriesKey: string; listEntryId: string; targetCount: number; kind: 'anime' | 'manga' }
+  | {
+      action: 'regress';
+      seriesKey: string;
+      listEntryId: string;
+      targetCount: number;
+      kind: 'anime' | 'manga';
+    }
   | { action: 'catch-up'; seriesKey: string };
 
 /**
@@ -423,8 +429,7 @@ export type ContributeProposeMediaResultPayload =
     }
   | { ok: false; error: string };
 
-export type IframeRelayMessage =
-  | { type: 'TAB_AUDIBLE_CHANGED'; payload: { audible: boolean } };
+export type IframeRelayMessage = { type: 'TAB_AUDIBLE_CHANGED'; payload: { audible: boolean } };
 
 export interface ResearchResultPayload {
   candidates: CandidateMedia[];
@@ -475,9 +480,7 @@ export type ExtensionResponse =
 /**
  * Envoi d'un message vers le service worker (background).
  */
-export async function sendMessage<R = ExtensionResponse>(
-  message: ExtensionMessage,
-): Promise<R> {
+export async function sendMessage<R = ExtensionResponse>(message: ExtensionMessage): Promise<R> {
   return chrome.runtime.sendMessage(message) as Promise<R>;
 }
 

@@ -67,7 +67,9 @@ interface WizardState {
 /**
  * Lance le wizard. Renvoie le pattern sauvegardé ou `null` si l'user annule.
  */
-export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Promise<LearnedPattern | null> {
+export async function launchConfigWizard(opts: {
+  kind: 'anime' | 'manga';
+}): Promise<LearnedPattern | null> {
   removeExisting();
   return new Promise((resolve) => {
     const host = document.createElement('div');
@@ -160,12 +162,14 @@ export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Pro
         const input = shadow.querySelector<HTMLInputElement>('#wiz-import-file');
         input?.click();
       });
-      shadow.querySelector<HTMLInputElement>('#wiz-import-file')?.addEventListener('change', async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) return;
-        await handleImportFile(file, opts.kind, finish, shadow);
-        (e.target as HTMLInputElement).value = '';
-      });
+      shadow
+        .querySelector<HTMLInputElement>('#wiz-import-file')
+        ?.addEventListener('change', async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (!file) return;
+          await handleImportFile(file, opts.kind, finish, shadow);
+          (e.target as HTMLInputElement).value = '';
+        });
       shadow.querySelector('#wiz-cancel')?.addEventListener('click', () => finish(null));
     };
 
@@ -276,8 +280,7 @@ export async function launchConfigWizard(opts: { kind: 'anime' | 'manga' }): Pro
         } else if (mode === 'manual') {
           state.mangaTracking = { mode };
         } else {
-          const existing =
-            state.mangaTracking?.mode === mode ? state.mangaTracking : undefined;
+          const existing = state.mangaTracking?.mode === mode ? state.mangaTracking : undefined;
           state.mangaTracking = { mode, selector: existing?.selector };
         }
         render();
@@ -656,10 +659,12 @@ function startSimplePick(
     wizardHost.style.display = 'flex';
   };
 
-  toolbar.querySelector<HTMLButtonElement>('#wiz-simple-pick-cancel')?.addEventListener('click', () => {
-    restore();
-    onCancel();
-  });
+  toolbar
+    .querySelector<HTMLButtonElement>('#wiz-simple-pick-cancel')
+    ?.addEventListener('click', () => {
+      restore();
+      onCancel();
+    });
 
   const onMove = (e: MouseEvent) => {
     const target = elementFromPointSkipOverlay(e.clientX, e.clientY);
@@ -732,7 +737,11 @@ function elementFromPointSkipOverlay(x: number, y: number): HTMLElement | null {
 export function generateSelector(el: HTMLElement): string {
   // 1. ID — privilégié si stable et unique (pas auto-généré react-id)
   const id = el.id;
-  if (id && /^[a-zA-Z][\w-]{0,40}$/.test(id) && document.querySelectorAll(`#${cssEscape(id)}`).length === 1) {
+  if (
+    id &&
+    /^[a-zA-Z][\w-]{0,40}$/.test(id) &&
+    document.querySelectorAll(`#${cssEscape(id)}`).length === 1
+  ) {
     return `#${cssEscape(id)}`;
   }
 
@@ -1142,15 +1151,15 @@ function renderResults(results: StrategyResult[], kind: 'anime' | 'manga'): stri
       const titleVal = r.title
         ? `<span class="val">${escapeHtml(r.title)}</span>`
         : `<span class="val missing">non trouvé</span>`;
-      const epVal = r.episode !== undefined
-        ? `<span class="val">${escapeHtml(r.episode)}</span>`
-        : `<span class="val missing">non trouvé</span>`;
-      const seasonVal = r.season !== undefined
-        ? `<span class="val">${escapeHtml(r.season)}</span>`
-        : `<span class="val missing">— (optionnel)</span>`;
-      const evidence = r.evidence
-        ? `<div class="evidence">${escapeHtml(r.evidence)}</div>`
-        : '';
+      const epVal =
+        r.episode !== undefined
+          ? `<span class="val">${escapeHtml(r.episode)}</span>`
+          : `<span class="val missing">non trouvé</span>`;
+      const seasonVal =
+        r.season !== undefined
+          ? `<span class="val">${escapeHtml(r.season)}</span>`
+          : `<span class="val missing">— (optionnel)</span>`;
+      const evidence = r.evidence ? `<div class="evidence">${escapeHtml(r.evidence)}</div>` : '';
 
       const reasonHtml = usable
         ? ''
@@ -1400,13 +1409,17 @@ function renderTrackingManga(state: WizardState): string {
       ${card('page-counter', 'Compteur de page', 'Lit un compteur dans le DOM (ex. « 12 / 24 ») et marque lu quand la dernière page est atteinte.', tracking.mode === 'page-counter' ? tracking.selector : undefined)}
       ${card('next-button', 'Bouton « chapitre suivant »', 'Marque lu au clic sur un bouton de navigation que tu désignes.', tracking.mode === 'next-button' ? tracking.selector : undefined)}
     </div>
-    ${tracking.mode === 'scroll' ? `
+    ${
+      tracking.mode === 'scroll'
+        ? `
       <p class="small muted" style="margin-top: 10px;">Sur les sites en mode « application » où la page entière ne scrolle pas, pointe le conteneur du lecteur (optionnel — l'auto-détection essaiera sinon).</p>
       <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn ${tracking.selector ? 'secondary' : 'primary'}" id="wiz-pick-scroll-container" type="button">${tracking.selector ? 'Re-pointer le conteneur' : 'Pointer le conteneur scrollable (optionnel)'}</button>
         ${tracking.selector ? `<button class="btn ghost" id="wiz-clear-scroll-container" type="button">Auto-détecter</button>` : ''}
       </div>
-    ` : ''}
+    `
+        : ''
+    }
     ${pickRow ? `<div style="margin-top:12px;display:flex;gap:8px;">${pickRow}</div>` : ''}
     <div class="footer" style="margin: 18px -20px 0;">
       <button class="btn secondary" id="wiz-tracking-back" type="button">Retour</button>
