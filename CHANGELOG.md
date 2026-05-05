@@ -1,3 +1,13 @@
+# [1.0.0-beta.5](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-05-05)
+
+
+### Bug Fixes
+
+* **ci:** bump package.json before build so the zipped manifest.json carries the new version ([79cc7c1](https://github.com/Actunime/Actunime-Sync/commit/79cc7c1d4be10865072a255a0997e37a5d3c6c90))
+* **lint:** clear all 13 ESLint warnings ([755841a](https://github.com/Actunime/Actunime-Sync/commit/755841a0b85aba00bfb8bd8430d034068a69f49b))
+* **formatlint:** fix code warn ([1291879](https://github.com/Actunime/Actunime-Sync/commit/1291879dc8dea58527df92cfc5ab7b9f1497205d))
+* **update-checker:** use /releases?per_page=1 instead of /releases/latest ([5ab1b86](https://github.com/Actunime/Actunime-Sync/commit/5ab1b86e5f5dc0218b79ff11f2cb25c7ad10ab1a))
+
 # [1.0.0-beta.4](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-05-04)
 
 
