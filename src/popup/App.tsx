@@ -373,7 +373,7 @@ function SiteActivationCard() {
   return (
     <div className="rounded-md border border-border bg-muted/10 p-3 flex flex-col gap-2.5">
       <div className="flex items-start gap-2">
-        <Globe className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+        <Globe className="size-4 text-muted-foreground shrink-0 mt-0.5" />
         <div className="text-xs text-muted-foreground leading-relaxed">
           Ajoute <strong className="text-foreground">{host}</strong> à ta liste de sites suivis.
           L'assistant de configuration s'ouvrira directement après pour identifier le titre et le
@@ -422,7 +422,7 @@ function CurrentDetectionCard() {
   if (!detection?.detected) {
     return (
       <div className="rounded-md border border-border bg-muted/10 p-3 flex items-start gap-2 text-xs">
-        <EyeOff className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+        <EyeOff className="size-4 text-muted-foreground shrink-0 mt-0.5" />
         <div className="text-muted-foreground">
           Aucune série détectée sur cet onglet. Ouvre un épisode sur un site configuré.
         </div>
@@ -430,7 +430,7 @@ function CurrentDetectionCard() {
     );
   }
 
-  return <DetectedAnimeCard detection={detection} />;
+  return <DetectedMediaCard detection={detection} />;
 }
 
 /**
@@ -439,7 +439,7 @@ function CurrentDetectionCard() {
  * - résolution vers l'entité Actunime (poster, titre officiel, année)
  * - barre de progression live
  */
-function DetectedAnimeCard({
+function DetectedMediaCard({
   detection,
 }: Readonly<{ detection: Extract<DetectionStatusPayload, { detected: true }> }>) {
   const { match, loading: matchLoading } = useMatchedMedia(detection);
@@ -500,14 +500,14 @@ function DetectedAnimeCard({
   return (
     <div className="rounded-md border border-primary/30 bg-primary/5 p-3 flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <Eye className="size-4 text-primary flex-shrink-0" />
+        <Eye className="size-4 text-primary shrink-0" />
         <p className="text-xs uppercase tracking-wide text-primary font-medium">
           {isManga ? 'En cours de lecture' : 'En cours de visionnage'}
         </p>
       </div>
 
       <div className="flex gap-3">
-        <AnimePoster src={matchedCover} loading={matchLoading} />
+        <MediaPoster src={matchedCover} loading={matchLoading} />
 
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <p className="text-sm font-medium leading-tight" title={matchedTitle ?? detection.title}>
@@ -752,7 +752,7 @@ function SiteConfigWizardCard() {
   return (
     <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 flex flex-col gap-2">
       <div className="flex items-start gap-2">
-        <AlertCircle className="size-4 text-amber-500 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
         <div className="text-xs leading-relaxed">
           <strong className="text-foreground">Site non configuré.</strong>{' '}
           <span className="text-muted-foreground">
@@ -796,12 +796,12 @@ function strategyLabel(strategy: string): string {
   }
 }
 
-function AnimePoster({ src, loading }: Readonly<{ src?: string | null; loading: boolean }>) {
+function MediaPoster({ src, loading }: Readonly<{ src?: string | null; loading: boolean }>) {
   const [errored, setErrored] = useState(false);
   const showImage = !loading && !!src && !errored;
 
   return (
-    <div className="size-16 rounded-md bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+    <div className="size-16 rounded-md bg-muted flex items-center justify-center shrink-0 overflow-hidden relative">
       {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
       {!loading && (!src || errored) && <ImageOff className="size-5 text-muted-foreground" />}
       {showImage && (
