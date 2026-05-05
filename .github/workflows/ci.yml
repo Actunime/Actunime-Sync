@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [beta, production]
+  push:
+    branches: [beta, production]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Installation de pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Récupération du chemin du store pnpm
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache du store pnpm
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Installation des dépendances
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Vérification du formatage
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm exec eslint . --ext ts,tsx
+
+      - name: Type-check
+        run: pnpm type-check
+
+      - name: Build
+        env:
+          VITE_API_URL: http://localhost:3000
+          VITE_WEB_URL: http://localhost:3002
+        run: pnpm vite build --mode development
