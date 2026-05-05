@@ -58,30 +58,44 @@ jobs:
       - name: Installation des dépendances
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build de l'extension
-        env:
-          VITE_API_URL: ${{ github.ref_name == 'production' && secrets.PROD_API_URL || secrets.BETA_API_URL }}
-          VITE_WEB_URL: ${{ github.ref_name == 'production' && secrets.PROD_WEB_URL || secrets.BETA_WEB_URL }}
-        run: pnpm build
-
-      - name: Génération du .zip de la prochaine version
-        # On lit le `nextRelease.version` que semantic-release calculerait, puis on
-        # zippe `dist/` avec ce nom. semantic-release attache ensuite le fichier
-        # à la release via le pattern `dist/actunime-sync-*.zip`.
+      - name: Calcul de la prochaine version
+        # Lit le `nextRelease.version` que semantic-release calculerait. Doit
+        # tourner AVANT le build pour que `manifest.config.ts` (qui lit
+        # `package.json`) embarque la bonne version dans le `manifest.json`
+        # final. Sans ça, le zip publié contient la version précédente.
+        id: next_version
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           NEXT_VERSION=$(pnpm dlx semantic-release --dry-run | grep "next release version is" | sed -E 's/.*is ([0-9].*)/\1/' | tail -n1)
           if [ -z "$NEXT_VERSION" ]; then
             echo "Aucune nouvelle version à publier — fin du job."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          ZIP_NAME="actunime-sync-v${NEXT_VERSION}.zip"
+          echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Bump de package.json à la prochaine version
+        if: steps.next_version.outputs.skip != 'true'
+        run: pnpm pkg set version=${{ steps.next_version.outputs.version }}
+
+      - name: Build de l'extension
+        if: steps.next_version.outputs.skip != 'true'
+        env:
+          VITE_API_URL: ${{ github.ref_name == 'production' && secrets.PROD_API_URL || secrets.BETA_API_URL }}
+          VITE_WEB_URL: ${{ github.ref_name == 'production' && secrets.PROD_WEB_URL || secrets.BETA_WEB_URL }}
+        run: pnpm build
+
+      - name: Génération du .zip
+        if: steps.next_version.outputs.skip != 'true'
+        run: |
+          ZIP_NAME="actunime-sync-v${{ steps.next_version.outputs.version }}.zip"
           echo "Création de $ZIP_NAME"
           cd dist && zip -r "../dist/${ZIP_NAME}" . && cd ..
           ls -la dist/
 
       - name: Publication via semantic-release
+        if: steps.next_version.outputs.skip != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN }}
