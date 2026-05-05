@@ -126,5 +126,5 @@ export function runDomSelectorsStrategy(): StrategyResult {
  * `document.title`.
  */
 function stripSiteSuffix(raw: string): string {
-  return raw.replace(/\s*[\-|·•–—]\s*[A-Za-z0-9.][^\-|·•–—]{0,30}\s*$/u, '').trim();
+  return raw.replace(/\s*[-|·•–—]\s*[A-Za-z0-9.][^-|·•–—]{0,30}\s*$/u, '').trim();
 }

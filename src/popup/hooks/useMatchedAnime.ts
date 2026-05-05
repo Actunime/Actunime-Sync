@@ -19,6 +19,15 @@ export function useMatchedAnime(detection: DetectionStatusPayload | null): UseMa
   const [match, setMatch] = useState<MatchResultPayload | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // `detection` change de référence toutes les 2s (poll de useCurrentDetection)
+  // même quand son contenu pertinent est identique. On extrait des primitives
+  // stables pour la deps array et on lit `detection` librement dans l'effet —
+  // l'effet ne refetche que quand `(detected, siteId, slug, title)` changent.
+  const detected = detection?.detected === true;
+  const siteId = detected && detection.detected ? detection.siteId : null;
+  const slug = detected && detection.detected ? detection.slug : null;
+  const title = detected && detection.detected ? detection.title : null;
+
   useEffect(() => {
     if (!detection || !detection.detected) {
       setMatch(null);
@@ -55,13 +64,8 @@ export function useMatchedAnime(detection: DetectionStatusPayload | null): UseMa
     return () => {
       cancelled = true;
     };
-    // On re-match dès que la série ou l'épisode change.
-  }, [
-    detection?.detected,
-    detection?.detected ? detection.siteId : null,
-    detection?.detected ? detection.slug : null,
-    detection?.detected ? detection.title : null,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detected, siteId, slug, title]);
 
   return { match, loading };
 }

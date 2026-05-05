@@ -178,7 +178,6 @@ export async function handleResearch(
 
 export async function handleConfirm(
   payload: ConfirmTrackPayload,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _context: { lastDetection?: ProgressUpdatePayload },
 ): Promise<ConfirmResultPayload> {
   if (payload.action === 'skip') return { state: 'skipped' };

@@ -50,7 +50,7 @@ const SEO_PREFIXES =
  * doit être assez court (≤ 30 caractères) pour ne pas grignoter un vrai
  * fragment du titre.
  */
-const SITE_SUFFIX = /\s*[\-|·•–—]\s*[A-Za-z0-9.][^\-|·•–—]{0,30}\s*$/u;
+const SITE_SUFFIX = /\s*[-|·•–—]\s*[A-Za-z0-9.][^-|·•–—]{0,30}\s*$/u;
 
 /**
  * Mots de bruit SEO que les sites collent en fin de titre (« X Manga »,

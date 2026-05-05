@@ -803,7 +803,7 @@ function buildPathSelector(el: HTMLElement): string {
 }
 
 function cssEscape(s: string): string {
-  return s.replace(/(["\\\.\#\[\]\:\(\)\s])/g, '\\$1');
+  return s.replace(/(["\\.#[\]:()\s])/g, '\\$1');
 }
 
 function escapeHtml(s: unknown): string {
