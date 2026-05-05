@@ -28,7 +28,7 @@ import { useApiHealth } from './hooks/useApiHealth';
 import { useAuth } from './hooks/useAuth';
 import { useConfigWizard } from './hooks/useConfigWizard';
 import { useCurrentDetection } from './hooks/useCurrentDetection';
-import { useMatchedAnime } from './hooks/useMatchedAnime';
+import { useMatchedMedia } from './hooks/useMatchedMedia';
 import { useSiteActivation } from './hooks/useSiteActivation';
 import { useTrackingState } from './hooks/useTrackingState';
 import { useUpdateInfo } from './hooks/useUpdateInfo';
@@ -442,7 +442,7 @@ function CurrentDetectionCard() {
 function DetectedAnimeCard({
   detection,
 }: Readonly<{ detection: Extract<DetectionStatusPayload, { detected: true }> }>) {
-  const { match, loading: matchLoading } = useMatchedAnime(detection);
+  const { match, loading: matchLoading } = useMatchedMedia(detection);
   const { state: tracking, marking, markAsWatched } = useTrackingState();
   const [contributing, setContributing] = useState(false);
   const [contributedFlash, setContributedFlash] = useState<null | 'created' | 'joined'>(null);
