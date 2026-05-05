@@ -1,3 +1,17 @@
+# [1.0.0-beta.4](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-05-04)
+
+
+### Bug Fixes
+
+* **manifest:** convert semver prerelease to Chrome-compatible version ([7181156](https://github.com/Actunime/Actunime-Sync/commit/718115647aed488870025e8ebc4d9ce25146743c))
+
+
+### Features
+
+* **detection:** add document-title strategy + shared title parser ([408dd3a](https://github.com/Actunime/Actunime-Sync/commit/408dd3aae2984ad2ef9a76bfcf79eb271532ad89))
+* **resume:** experimental "Reprendre" button on watching badge ([06406ac](https://github.com/Actunime/Actunime-Sync/commit/06406ac4e189fab72a88e1da0423731900c3d61d))
+* **progress:** replace video observer with scroll/page-counter/next-button ([269599f](https://github.com/Actunime/Actunime-Sync/commit/269599f2ee40675ae50b5dd97794e8a5155ee29a))
+
 # [1.0.0-beta.3](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2026-05-04)
 
 
