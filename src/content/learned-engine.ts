@@ -89,16 +89,14 @@ export function applyLearnedPattern(pattern: LearnedPattern): DetectionResult | 
 
   if (!title) return null;
 
+  // Le numéro extrait par la stratégie choisie par l'user prime — l'URL ne
+  // sert que de fallback quand la stratégie n'a pas fourni de nombre. Certains
+  // sites (MangaFire…) mettent un ID interne dans le path (/chapter/3833602),
+  // pas le numéro de chapitre.
   if (isManga) {
-    const urlChapter = extractChapterFromUrl();
-    if (urlChapter !== undefined) {
-      chapter = urlChapter;
-    }
+    if (chapter === undefined) chapter = extractChapterFromUrl();
   } else {
-    const urlEpisode = extractEpisodeFromUrl();
-    if (urlEpisode !== undefined) {
-      episode = urlEpisode;
-    }
+    if (episode === undefined) episode = extractEpisodeFromUrl();
   }
 
   const seriesSlug = slugify(title);
@@ -120,7 +118,9 @@ function extractChapterFromUrl(): number | undefined {
   const m = /\/(?:chapter|chapitre|ch)[-_/]?(\d+(?:\.\d+)?)\b/i.exec(location.pathname);
   if (!m) return undefined;
   const n = Math.floor(Number(m[1]));
-  return Number.isFinite(n) && n > 0 ? n : undefined;
+  // Au-delà de 4 chiffres, c'est presque sûrement un ID interne du site
+  // (MangaFire : /chapter/3833602), pas un numéro de chapitre.
+  return Number.isFinite(n) && n > 0 && n < 10_000 ? n : undefined;
 }
 
 function extractEpisodeFromUrl(): number | undefined {
