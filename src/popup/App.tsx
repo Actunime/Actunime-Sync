@@ -318,11 +318,12 @@ function ContributionSuccessCard({
   onClose,
 }: Readonly<IContributionSuccessCardProps>) {
   const listPath = kind === 'manga' ? '/profile/mangas' : '/profile/animes';
-  const itemWord = kind === 'manga' ? 'manga' : 'anime';
+  const itemWithCe = kind === 'manga' ? 'ce manga' : 'cet anime';
+  const itemWithLe = kind === 'manga' ? 'Le manga' : "L'anime";
   const message = joinedExisting
-    ? `Un autre utilisateur avait déjà proposé cet ${itemWord} — tu rejoins sa proposition. ` +
+    ? `Un autre utilisateur avait déjà proposé ${itemWithCe} — tu rejoins sa proposition. ` +
       `L'œuvre est maintenant dans ta liste, vous validerez ensemble.`
-    : `Ta proposition est envoyée. L'${itemWord} est ajouté à ta liste en attendant la validation par l'équipe Actunime.`;
+    : `Ta proposition est envoyée. ${itemWithLe} est ajouté à ta liste en attendant la validation par l'équipe Actunime.`;
   return (
     <section className="rounded-md border border-success/40 bg-success/5 p-4 flex flex-col gap-3">
       <div className="flex items-start gap-2">
@@ -597,9 +598,9 @@ function TrackingFooter({
   onMarkAsWatched: () => void | Promise<void>;
 }>) {
   const isManga = kind === 'manga';
-  const itemWord = isManga ? 'chapitre' : 'épisode';
+  const itemWithCe = isManga ? 'ce chapitre' : 'cet épisode';
   const consumedVerb = isManga ? 'lu' : 'vu';
-  const markBtnLabel = `Marquer ce ${itemWord} comme ${consumedVerb}`;
+  const markBtnLabel = `Marquer ${itemWithCe} comme ${consumedVerb}`;
 
   if (markedFlash === 'ok') {
     return (
