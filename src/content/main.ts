@@ -36,6 +36,16 @@ const LOG = '[Actunime]';
 
 let currentDetection: DetectionResult | null = null;
 const DISCOVERY_DELAY_MS = 5_000;
+const MANGA_DISCOVERY_DELAY_MS = 2_000;
+/**
+ * Fenêtre pendant laquelle, si un LearnedPattern existe mais que sa stratégie
+ * échoue encore (SPA : `<title>`/metadata montés après le load), on attend au
+ * lieu de retomber sur la détection générique — qui capterait un titre pourri
+ * (« MangaFire - ») et déclencherait le prompt avec.
+ */
+const LEARNED_GRACE_MS = 12_000;
+let navigationStartedAt = Date.now();
+let graceRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let discoveryTimer: ReturnType<typeof setTimeout> | null = null;
 let discoveryFired = false;
 let learnedPattern: LearnedPattern | null = null;
@@ -48,7 +58,12 @@ let mangaInitializedChapter: number | undefined = undefined;
 function evaluateCurrentPage() {
   const host = location.hostname;
 
-  const detection: DetectionResult | null = applyLearned() ?? buildGenericDetection(host);
+  const learned = applyLearned();
+  if (!learned && learnedPattern && Date.now() - navigationStartedAt < LEARNED_GRACE_MS) {
+    scheduleGraceRetry();
+    return;
+  }
+  const detection: DetectionResult | null = learned ?? buildGenericDetection(host);
 
   if (!detection) {
     audioObserver?.cleanup();
@@ -115,13 +130,18 @@ function evaluateCurrentPage() {
 
   if (detection.kind === 'manga') {
     if (mangaInitializedForUrl === location.href && mangaInitializedChapter === detection.chapter) {
+      // Le cleanup ci-dessus a pu détruire l'observer (titre affiné → sameKey
+      // false) alors que le chapitre n'a pas changé : ré-attache sans relancer
+      // la discovery.
+      if (!mangaObserver) attachMangaObserver(detection);
       return;
     }
+    cancelDiscovery();
     discoveryFired = false;
     removeWatchingBadge();
     mangaInitializedForUrl = location.href;
     mangaInitializedChapter = detection.chapter;
-    void scheduleDiscovery(0);
+    void scheduleDiscovery(MANGA_DISCOVERY_DELAY_MS);
     attachMangaObserver(detection);
     reportTrackingState();
     return;
@@ -159,6 +179,9 @@ function evaluateCurrentPage() {
  * - Mode video direct : 5s (le `<video>` peut fire `play` sur preview/scrubbing).
  * - Mode audio : 0s (l'observer audio attend déjà 5s de stabilité avant de
  *   nous appeler — pas besoin d'ajouter un délai).
+ * - Mode manga : 2s — laisse le `<title>`/DOM finir de se monter ; le timer
+ *   lit `currentDetection` au moment du tir, donc un titre affiné entre-temps
+ *   est pris en compte.
  */
 function scheduleDiscovery(delayMs: number = DISCOVERY_DELAY_MS) {
   if (discoveryFired) return;
@@ -183,6 +206,18 @@ function cancelDiscovery() {
     clearTimeout(discoveryTimer);
     discoveryTimer = null;
   }
+}
+
+/**
+ * Pendant la grace period learned, garantit une ré-évaluation même si le DOM
+ * ne mute plus (le MutationObserver ne re-déclencherait alors jamais).
+ */
+function scheduleGraceRetry() {
+  if (graceRetryTimer) return;
+  graceRetryTimer = setTimeout(() => {
+    graceRetryTimer = null;
+    evaluateCurrentPage();
+  }, 1_000);
 }
 
 /**
@@ -580,6 +615,9 @@ async function handleDiscovery(detection: DetectionResult) {
     if (choice.action === 'configure_site') {
       const pattern = await launchConfigWizard({ kind: detection.kind });
       if (!pattern) return; // user a annulé
+      // Manga : le listener storage.onChanged relance déjà évaluation +
+      // discovery (avec le délai de stabilité) — pas de retry direct ici.
+      if (pattern.kind === 'manga') return;
       // `learnedPattern` sera mis à jour via le storage onChanged listener.
       // On laisse une petite fenêtre pour que `evaluateCurrentPage` ait
       // recalculé `currentDetection`, puis on retente la discovery.
@@ -733,6 +771,7 @@ function observeNavigation() {
   const check = () => {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
+      navigationStartedAt = Date.now();
       if (currentDetection && audioObserver?.hasReachedEngagement()) {
         console.info(LOG, 'Push épisode précédent au changement de page');
         void handleProgressPush(currentDetection, 1);
