@@ -1,3 +1,13 @@
+# [1.0.0-beta.6](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-07-15)
+
+
+### Bug Fixes
+
+* **content:** différer la discovery manga jusqu'à stabilité du titre ([d417b4b](https://github.com/Actunime/Actunime-Sync/commit/d417b4be935af045a9adeefcb9bad1bf46c98e56))
+* **overlay:** élisions françaises dans le badge de suivi ([fd08576](https://github.com/Actunime/Actunime-Sync/commit/fd08576bf9588adf8c8c173ab1e9a16739b65dd0))
+* **popup:** élisions françaises dans les messages de contribution ([c7f801e](https://github.com/Actunime/Actunime-Sync/commit/c7f801e6241c2954e3bf5628a7b625566d558890))
+* **detection:** la stratégie configurée prime sur le numéro extrait de l'URL ([01aaa84](https://github.com/Actunime/Actunime-Sync/commit/01aaa8481e88d4ecefc4009815adfb754644cf13))
+
 # [1.0.0-beta.5](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-05-05)
 
 
