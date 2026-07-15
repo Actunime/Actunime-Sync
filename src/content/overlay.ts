@@ -1049,11 +1049,12 @@ export function showWatchingBadge(opts: WatchingBadgeOptions): void {
 
   const isManga = opts.kind === 'manga';
   const currentNumber = isManga ? opts.chapter : opts.episode;
-  const numberWord = isManga ? 'chapitre' : 'épisode';
   const numberWordCap = isManga ? 'Chapitre' : 'Épisode';
+  const ceNumberWord = isManga ? 'ce chapitre' : 'cet épisode';
+  const auNumberWord = isManga ? 'au chapitre' : "à l'épisode";
   const epText = currentNumber
     ? `${numberWordCap} ${currentNumber}`
-    : `Numéro de ${numberWord} non détecté`;
+    : `Numéro ${isManga ? 'de chapitre' : "d'épisode"} non détecté`;
   const seasonHint = !isManga && opts.season ? ` (saison ${opts.season})` : '';
   const labelHeader = isManga ? 'Vous lisez' : 'Vous regardez';
   const markBtnLabel = isManga ? 'Marquer lu' : 'Marquer vu';
@@ -1068,10 +1069,10 @@ export function showWatchingBadge(opts: WatchingBadgeOptions): void {
     currentNumber === undefined
       ? `Le numéro n'a pas été détecté sur cette page. Clique « Modifier » pour reconfigurer la détection sur ce site.`
       : isAlreadyConsumed
-        ? `Vous avez déjà ${isManga ? 'lu' : 'vu'} ce ${numberWord}. Cliquez « ${markBtnLabel} » pour ${isManga ? 'le relire' : 'le relire (rewatch)'}.`
+        ? `Vous avez déjà ${isManga ? 'lu' : 'vu'} ${ceNumberWord}. Cliquez « ${markBtnLabel} » pour ${isManga ? 'le relire' : 'le relire (rewatch)'}.`
         : opts.mode === 'audio'
           ? `L'épisode que tu regardes sera mis à jour dans ta liste au changement d'épisode, ou immédiatement avec « ${markBtnLabel} ».`
-          : `Clique « ${markBtnLabel} » pour mettre à jour ta liste avec ce ${numberWord}.`;
+          : `Clique « ${markBtnLabel} » pour mettre à jour ta liste avec ${ceNumberWord}.`;
 
   const cover = opts.coverUrl
     ? `<img class="cover" data-cover-for="${escapeHtml('badge')}" alt="" />`
@@ -1197,7 +1198,7 @@ export function showWatchingBadge(opts: WatchingBadgeOptions): void {
       ${
         opts.resume
           ? `<div class="actions">
-              <button class="btn resume" id="actunime-badge-resume" title="Aller directement au ${numberWord} ${opts.resume.targetNumber} (fonctionnalité expérimentale)">Reprendre au ${numberWord} ${opts.resume.targetNumber}<span class="exp">EXP</span></button>
+              <button class="btn resume" id="actunime-badge-resume" title="Aller directement ${auNumberWord} ${opts.resume.targetNumber} (fonctionnalité expérimentale)">Reprendre ${auNumberWord} ${opts.resume.targetNumber}<span class="exp">EXP</span></button>
             </div>`
           : ''
       }
@@ -1302,7 +1303,7 @@ export function showConfigPrompt(opts: {
   const headline = isManga
     ? 'Site non configuré pour le suivi de tes mangas'
     : 'Site non configuré pour le suivi de tes animes';
-  const body = `Lance l'assistant pour qu'Actunime Sync identifie le titre et le ${isManga ? 'chapitre' : 'épisode'} sur ce site.`;
+  const body = `Lance l'assistant pour qu'Actunime Sync identifie le titre et ${isManga ? 'le chapitre' : "l'épisode"} sur ce site.`;
 
   shadow.innerHTML = `
     <style>
