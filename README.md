@@ -116,7 +116,7 @@ est libre, mais doit utiliser un autre nom et logo distincts.
 
 ## Liens
 
-- 🌐 Site Actunime : [actunime.fr](https://actunime.fr)
+- 🌐 Site Actunime : [actunime.fr](https://beta.actunime.fr)
 - 📦 Releases : [github.com/Actunime/Actunime-Sync/releases](https://github.com/Actunime/Actunime-Sync/releases)
 - 🐛 Bugs & demandes : [Issues GitHub](https://github.com/Actunime/Actunime-Sync/issues)
 - 🤝 Contribuer : [CONTRIBUTING.md](CONTRIBUTING.md)
