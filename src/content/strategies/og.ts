@@ -102,8 +102,11 @@ export function parseEpisodeSeasonFromTitle(raw: string): {
     }
   }
 
-  // Nettoie séparateurs résiduels en bouts/queue
+  // Nettoie les paires de crochets/parenthèses vidées par le strip ci-dessus
+  // (ex. « Title - [Season 1] Ep. 0 » → « Title - [] » une fois saison+épisode
+  // retirés) puis les séparateurs résiduels en bouts/queue.
   title = title
+    .replace(/[([{]\s*[)\]}]/g, '')
     .replace(/[\s\-|·•–—]+$/u, '')
     .replace(/^[\s\-|·•–—]+/u, '')
     .replace(/\s+/g, ' ')
