@@ -398,9 +398,18 @@ export function showConfirmationCard(opts: ConfirmationCardOptions): Promise<Con
       };
 
       searchBtn?.addEventListener('click', runSearch);
+      // stopPropagation (pas preventDefault) sur les 3 events clavier : le champ
+      // vit dans une Shadow DOM, donc `event.target` vu par les listeners du
+      // site est retargeté vers `host` (pas l'<input>) — les sites qui essaient
+      // de bien faire (« ignore les raccourcis si on tape dans un input ») ne
+      // le détectent pas, et ceux qui ne vérifient rien interceptent direct
+      // (espace, w, …) au niveau document avant même que la frappe s'affiche.
       searchInput?.addEventListener('keydown', (e) => {
+        e.stopPropagation();
         if ((e as KeyboardEvent).key === 'Enter') runSearch();
       });
+      searchInput?.addEventListener('keyup', (e) => e.stopPropagation());
+      searchInput?.addEventListener('keypress', (e) => e.stopPropagation());
     } catch (err) {
       console.error('showConfirmationCard error', err);
     }
