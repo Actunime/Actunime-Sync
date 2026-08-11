@@ -1,3 +1,11 @@
+# [1.0.0-beta.7](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-08-11)
+
+
+### Bug Fixes
+
+* **detection:** accepter le chapitre/épisode 0 comme valeur valide ([41ce785](https://github.com/Actunime/Actunime-Sync/commit/41ce78545bc475be493da2a989beac3863410502))
+* **detection:** nettoyer les crochets vides résiduels du titre détecté ([64d4037](https://github.com/Actunime/Actunime-Sync/commit/64d4037d2092a21f9d74325ffeb549de5c768b6f))
+
 # [1.0.0-beta.6](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-07-15)
 
 
