@@ -1,3 +1,10 @@
+# [1.0.0-beta.10](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-08-11)
+
+
+### Bug Fixes
+
+* **security:** renforcer la validation anti-ReDoS des patterns importés ([e1d0d9b](https://github.com/Actunime/Actunime-Sync/commit/e1d0d9b53d5f74fd0d2ec4738048d510947d87a3))
+
 # [1.0.0-beta.9](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-08-11)
 
 
