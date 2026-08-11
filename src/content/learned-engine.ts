@@ -120,7 +120,8 @@ function extractChapterFromUrl(): number | undefined {
   const n = Math.floor(Number(m[1]));
   // Au-delà de 4 chiffres, c'est presque sûrement un ID interne du site
   // (MangaFire : /chapter/3833602), pas un numéro de chapitre.
-  return Number.isFinite(n) && n > 0 && n < 10_000 ? n : undefined;
+  // 0 est valide (chapitre 0 = prologue, courant sur Webtoon).
+  return Number.isFinite(n) && n >= 0 && n < 10_000 ? n : undefined;
 }
 
 function extractEpisodeFromUrl(): number | undefined {
@@ -129,7 +130,7 @@ function extractEpisodeFromUrl(): number | undefined {
     /[/-]s\d{1,2}e(\d{1,4})\b/i.exec(location.pathname);
   if (!m) return undefined;
   const n = Number(m[1]);
-  return Number.isFinite(n) && n > 0 && n < 9999 ? n : undefined;
+  return Number.isFinite(n) && n >= 0 && n < 9999 ? n : undefined;
 }
 
 function readText(selector: string): string | undefined {
@@ -156,7 +157,8 @@ function readNumericSelector(sel: NumericSelector): number | undefined {
     const raw = tokens[sel.tokenIndex];
     if (raw === undefined) return undefined;
     const n = Number(raw);
-    return Number.isFinite(n) && n > 0 && n < 9999 ? n : undefined;
+    // 0 est valide (chapitre/épisode 0 = prologue, courant sur Webtoon).
+    return Number.isFinite(n) && n >= 0 && n < 9999 ? n : undefined;
   }
   return parseNumber(text);
 }
@@ -173,7 +175,7 @@ function parseNumber(text: string): number | undefined {
   const any = /(\d{1,4})/.exec(text);
   if (any) {
     const n = Number(any[1]);
-    if (n > 0 && n < 9999) return n;
+    if (n >= 0 && n < 9999) return n;
   }
   return undefined;
 }

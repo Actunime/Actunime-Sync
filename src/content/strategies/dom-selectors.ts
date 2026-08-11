@@ -66,7 +66,7 @@ export function runDomSelectorsStrategy(): StrategyResult {
     const m = /(?:épisode|episode|ep)\.?\s*(\d{1,4})/i.exec(text) ?? /\b(\d{1,4})\b/.exec(text);
     if (m) {
       const n = Number(m[1]);
-      if (n > 0 && n < 9999) {
+      if (n >= 0 && n < 9999) {
         episode = n;
         episodeSource = sel;
         break;
