@@ -169,6 +169,8 @@ pas ce principe.
 
 ## Licence
 
-En contribuant, tu acceptes que ta contribution soit publiée sous **GPL-3.0-or-later**
-(la même licence que le projet). Tu conserves tes droits d'auteur sur tes ajouts
-mais accordes une licence GPL irrévocable.
+Ce dépôt est **source disponible**, pas open source (voir [LICENSE](LICENSE)) —
+la réutilisation du code en dehors du projet reste soumise à autorisation. En
+contribuant (issue, PR), tu conserves tes droits d'auteur sur tes ajouts mais
+accordes à Actunime le droit irrévocable de les intégrer, modifier et
+distribuer dans le cadre du projet.

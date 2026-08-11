@@ -2,7 +2,7 @@
 
 > Extension navigateur de synchronisation automatique des animes & mangas avec [Actunime](https://actunime.fr).
 
-[![Licence : GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-blue.svg)](LICENSE)
+[![Licence : source disponible](https://img.shields.io/badge/licence-source--disponible-blue.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/Actunime/Actunime-Sync?include_prereleases)](https://github.com/Actunime/Actunime-Sync/releases)
 [![Manifest V3](https://img.shields.io/badge/manifest-V3-brightgreen.svg)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 
@@ -129,15 +129,17 @@ structure du code, le flow de configuration par site et les règles de matching.
   navigateur sauf si tu les exportes explicitement en JSON.
 - Seules les progressions d'épisodes (titre + numéro) sont envoyées à l'API Actunime,
   exactement comme si tu cliquais « marqué vu » sur le site.
-- Le code source est intégralement public sous licence GPL-3.0 et auditable.
+- Le code source est intégralement public et auditable.
 
 ## Licence
 
-[GPL-3.0-or-later](LICENSE) — toute redistribution ou modification doit rester
-sous la même licence (copyleft).
+Dépôt **source disponible**, pas open source : le code est public pour que tu
+puisses le lire, l'auditer et le builder toi-même, mais sa réutilisation
+(redistribution, fork, projet dérivé, usage commercial) reste soumise à
+autorisation. Détails dans [LICENSE](LICENSE).
 
-Le **nom « Actunime » et le logo sont des marques** de leur propriétaire. Un fork
-est libre, mais doit utiliser un autre nom et logo distincts.
+Le **nom « Actunime » et le logo sont des marques** de leur propriétaire et ne
+sont couverts par aucune des autorisations du dépôt.
 
 ## Liens
 

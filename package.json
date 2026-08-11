@@ -3,7 +3,7 @@
   "version": "1.0.0-beta.8",
   "description": "Extension de synchronisation et suivi des animes & mangas avec Actunime",
   "private": true,
-  "license": "GPL-3.0-or-later",
+  "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://github.com/Actunime/Actunime-Sync#readme",
   "bugs": {
     "url": "https://github.com/Actunime/Actunime-Sync/issues"
