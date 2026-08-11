@@ -30,15 +30,40 @@ sans clic à chaque épisode.
 - **Notification de mise à jour** : l'extension vérifie quotidiennement les
   nouvelles releases sur GitHub et te prévient quand une mise à jour est dispo.
 
+### Aperçu
+
+| | |
+|---|---|
+| ![Popup connecté, détection active](docs/img/popup-connected-detection.png) | ![Carte de confirmation de lecture](docs/img/confirmation-card.png) |
+| Détection active, épisode en cours reconnu | Confirmation d'un chapitre en un clic |
+| ![Notification de mise à jour de liste](docs/img/marked-read-toast.png) | ![Page Options, export et import](docs/img/options-export-import.png) |
+| Ta liste se met à jour instantanément | Sites configurés, export/import JSON |
+
+La configuration par site en vidéo — l'assistant teste automatiquement les 4 stratégies
+de détection, et permet une configuration manuelle si aucune ne suffit (couvre environ
+90 % des sites) :
+
+<video src="https://raw.githubusercontent.com/Actunime/Actunime-Sync/beta/docs/img/site-config-wizard.mp4" controls muted playsinline width="720"></video>
+
 ## Installation
 
 ### Pour les utilisateurs (release stable)
+
+L'installation en vidéo (téléchargement → mode développeur → extension chargée et connectée) :
+
+<video src="https://raw.githubusercontent.com/Actunime/Actunime-Sync/beta/docs/img/install-flow.mp4" controls muted playsinline width="720"></video>
 
 1. Télécharge la dernière `actunime-sync-vX.Y.Z.zip` depuis la page
    [Releases GitHub](https://github.com/Actunime/Actunime-Sync/releases/latest).
 2. Décompresse l'archive dans un dossier dédié.
 3. Ouvre `chrome://extensions` (ou `edge://extensions`).
 4. Active le **Mode développeur** (interrupteur en haut à droite).
+
+   > Chrome affiche alors un bandeau *« Désactiver les extensions en mode
+   > développeur »* — c'est normal et attendu pour **toute** extension chargée
+   > hors du Chrome Web Store, pas un signe de danger. Il ne bloque rien ; tu
+   > peux continuer l'installation.
+
 5. Clique **« Charger l'extension non empaquetée »** et sélectionne le dossier décompressé.
 6. Connecte-toi à Actunime depuis le popup de l'extension.
 7. Visite un site de streaming, clique l'icône Actunime Sync dans la barre d'outils,
@@ -116,7 +141,7 @@ est libre, mais doit utiliser un autre nom et logo distincts.
 
 ## Liens
 
-- 🌐 Site Actunime : [actunime.fr](https://beta.actunime.fr)
+- 🌐 Site Actunime : [beta.actunime.fr](https://beta.actunime.fr)
 - 📦 Releases : [github.com/Actunime/Actunime-Sync/releases](https://github.com/Actunime/Actunime-Sync/releases)
 - 🐛 Bugs & demandes : [Issues GitHub](https://github.com/Actunime/Actunime-Sync/issues)
 - 🤝 Contribuer : [CONTRIBUTING.md](CONTRIBUTING.md)
