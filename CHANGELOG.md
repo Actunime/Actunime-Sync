@@ -1,3 +1,10 @@
+# [1.0.0-beta.9](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-08-11)
+
+
+### Bug Fixes
+
+* **overlay:** isoler le champ de recherche des raccourcis clavier du site ([094bb2a](https://github.com/Actunime/Actunime-Sync/commit/094bb2a5a715043bc01e34ddf5e1910f07583e34))
+
 # [1.0.0-beta.8](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-08-11)
 
 
