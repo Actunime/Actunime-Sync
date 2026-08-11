@@ -102,5 +102,14 @@ export function cleanScrapedTitle(raw: string): string {
     t = stripped;
   }
 
-  return t.trim();
+  // Pass 5 — séparateur résiduel isolé en bout de chaîne (ex. « Tower of God · »
+  // quand le site laisse un séparateur de breadcrumb/décoration sans rien
+  // derrière). Les passes précédentes ne le retirent que si du bruit connu ou
+  // du texte suit le séparateur — ici rien ne suit, donc rien ne matchait.
+  t = t
+    .replace(/[\s\-|·•–—:]+$/u, '')
+    .replace(/^[\s\-|·•–—:]+/u, '')
+    .trim();
+
+  return t;
 }
