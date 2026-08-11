@@ -1,3 +1,10 @@
+# [1.0.0-beta.8](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-08-11)
+
+
+### Bug Fixes
+
+* **detection:** retirer un séparateur résiduel isolé en bout de titre ([7721411](https://github.com/Actunime/Actunime-Sync/commit/772141102275202aa97908805537e48d3be394fa))
+
 # [1.0.0-beta.7](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-08-11)
 
 
