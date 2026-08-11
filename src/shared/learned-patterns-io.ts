@@ -163,9 +163,17 @@ function isObject(v: unknown): v is Record<string, unknown> {
 }
 
 const MAX_REGEX_LENGTH = 256;
-const REDOS_HEURISTIC = /\([^)]*[+*][^)]*\)[+*]|\(\?:[^)]*[+*][^)]*\)[+*]/;
+/**
+ * Heuristique anti-ReDoS. Deux formes de backtracking catastrophique visées :
+ *  - quantificateur imbriqué : `(a+)+`, `(a*){2,}`
+ *  - alternance ambiguë répétée : `(a|a)+`, `(x|xx)*` — pas de `+`/`*` littéral
+ *    à l'intérieur du groupe, donc invisible pour la première forme seule.
+ * Ni exhaustif ni une preuve d'innocuité (analyse NFA hors scope ici), mais
+ * couvre les formes classiques qu'on trouverait dans un pattern partagé.
+ */
+const REDOS_HEURISTIC = /\([^)]*[+*][^)]*\)\s*[+*{]|\([^)]*\|[^)]*\)\s*[+*{]/;
 
-function isValidRegex(source: string): boolean {
+export function isValidRegex(source: string): boolean {
   if (typeof source !== 'string') return false;
   if (source.length === 0 || source.length > MAX_REGEX_LENGTH) return false;
   if (REDOS_HEURISTIC.test(source)) return false;

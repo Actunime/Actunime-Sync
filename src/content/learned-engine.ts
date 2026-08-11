@@ -6,6 +6,7 @@
  */
 
 import type { LearnedPattern, NumericSelector } from '@/shared/types';
+import { isValidRegex } from '@/shared/learned-patterns-io';
 import type { DetectionResult } from './detection';
 import {
   runDocumentTitleStrategy,
@@ -15,11 +16,13 @@ import {
   runUrlTokensStrategy,
 } from './strategies';
 
-const MAX_RUNTIME_REGEX_LENGTH = 256;
-
 export function applyLearnedPattern(pattern: LearnedPattern): DetectionResult | null {
   // Filtre URL : ne tire que sur les pages d'épisode (si regex fournie).
-  if (pattern.episodeUrlRegex && pattern.episodeUrlRegex.length <= MAX_RUNTIME_REGEX_LENGTH) {
+  // Revalidée ici (pas seulement à l'import) : `SAVE_LEARNED_PATTERN` accepte
+  // aussi des patterns construits ailleurs que par `parseLearnedPatternsExport`,
+  // donc on ne peut pas supposer que tout ce qui arrive en storage a déjà été
+  // passé au crible anti-ReDoS.
+  if (pattern.episodeUrlRegex && isValidRegex(pattern.episodeUrlRegex)) {
     try {
       const re = new RegExp(pattern.episodeUrlRegex);
       if (!re.test(location.pathname)) return null;
