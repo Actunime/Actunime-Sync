@@ -43,7 +43,7 @@ La configuration par site en vidéo — l'assistant teste automatiquement les 4 
 de détection, et permet une configuration manuelle si aucune ne suffit (couvre environ
 90 % des sites) :
 
-<video src="https://raw.githubusercontent.com/Actunime/Actunime-Sync/beta/docs/img/site-config-wizard.mp4" controls muted playsinline width="720"></video>
+<video src="https://github.com/user-attachments/assets/c39d2b22-0f08-4b25-8598-702195fa8555" controls muted playsinline width="720"></video>
 
 ## Installation
 
@@ -51,7 +51,7 @@ de détection, et permet une configuration manuelle si aucune ne suffit (couvre 
 
 L'installation en vidéo (téléchargement → mode développeur → extension chargée et connectée) :
 
-<video src="https://raw.githubusercontent.com/Actunime/Actunime-Sync/beta/docs/img/install-flow.mp4" controls muted playsinline width="720"></video>
+<video src="https://github.com/user-attachments/assets/45501eda-28c3-4f38-b269-bdee460b4ffa" controls muted playsinline width="720"></video>
 
 1. Télécharge la dernière `actunime-sync-vX.Y.Z.zip` depuis la page
    [Releases GitHub](https://github.com/Actunime/Actunime-Sync/releases/latest).
