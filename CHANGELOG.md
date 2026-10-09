@@ -1,3 +1,10 @@
+# [1.0.0-beta.11](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-10-09)
+
+
+### Bug Fixes
+
+* **deps:** corrige les vulnérabilités des dépendances (0 haute) ([75f153a](https://github.com/Actunime/Actunime-Sync/commit/75f153abef9306f10fd14a54fd75d2f9221f95bb))
+
 # [1.0.0-beta.10](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-08-11)
 
 
