@@ -5,12 +5,7 @@ export type SiteKind = 'anime' | 'manga';
  * `manual` = l'user a pointé les éléments du DOM lui-même via le pick visuel.
  */
 export type StrategyId =
-  | 'jsonld'
-  | 'og'
-  | 'url-tokens'
-  | 'document-title'
-  | 'dom-selectors'
-  | 'manual';
+  'jsonld' | 'og' | 'url-tokens' | 'document-title' | 'dom-selectors' | 'manual';
 
 /**
  * Sélecteur numérique : un sélecteur CSS + optionnellement l'index du nombre

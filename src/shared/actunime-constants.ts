@@ -1,11 +1,5 @@
 export type IListStatus =
-  | 'WATCHING'
-  | 'READING'
-  | 'COMPLETED'
-  | 'ON_HOLD'
-  | 'DROPPED'
-  | 'PLAN_TO_WATCH'
-  | 'PLAN_TO_READ';
+  'WATCHING' | 'READING' | 'COMPLETED' | 'ON_HOLD' | 'DROPPED' | 'PLAN_TO_WATCH' | 'PLAN_TO_READ';
 
 export const AnimeListStatusArray: IListStatus[] = [
   'WATCHING',
