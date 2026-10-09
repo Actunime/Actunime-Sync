@@ -1,0 +1,9 @@
+# Versions publiées depuis au moins 3 jours seulement (protection contre les paquets compromis, S2).
+minimumReleaseAge: 4320
+
+
+auditConfig:
+  ignoreGhsas:
+    # braces (via semantic-release > micromatch) : aucune version corrigée publiée ;
+    # outil de release en CI uniquement, absent de l'extension publiée.
+    - GHSA-vfj7-8cjw-p6xm
