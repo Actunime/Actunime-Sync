@@ -80,8 +80,7 @@ export function App() {
     setErrorMessage('');
     try {
       const res = (await chrome.runtime.sendMessage({ type: 'START_AUTH' })) as
-        | { ok: boolean; error?: string }
-        | undefined;
+        { ok: boolean; error?: string } | undefined;
       if (res && !res.ok) throw new Error(res.error);
       await refresh();
       setActionState('idle');
