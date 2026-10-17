@@ -1,3 +1,11 @@
+# [1.0.0-beta.12](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-10-17)
+
+
+### Bug Fixes
+
+* **sync:** compare la version du tag à version_name pour la détection de mise à jour ([7d248b6](https://github.com/Actunime/Actunime-Sync/commit/7d248b6185b5cc8d7ab4b14b355fc599cb104739))
+* **sync:** connexion exécutée dans le service worker et requêtes API sans cookie ([f1c1d81](https://github.com/Actunime/Actunime-Sync/commit/f1c1d810aa99d3450eb92b8437b47fdf24692ea6))
+
 # [1.0.0-beta.11](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-10-09)
 
 
