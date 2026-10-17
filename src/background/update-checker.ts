@@ -37,7 +37,9 @@ export async function checkForUpdate(): Promise<void> {
     const latest = top.tag_name;
     const releaseUrl = top.html_url;
     if (!latest) return;
-    const current = chrome.runtime.getManifest().version;
+    const manifest = chrome.runtime.getManifest();
+    // `version` est au format Chrome (1.0.0.11) ; `version_name` garde le semver (1.0.0-beta.11).
+    const current = manifest.version_name ?? manifest.version;
     const available = compareVersions(latest, current) > 0;
     const info: UpdateInfo = {
       available,
@@ -46,13 +48,13 @@ export async function checkForUpdate(): Promise<void> {
       checkedAt: Date.now(),
     };
     await chrome.storage.local.set({ updateInfo: info });
-    if (available) {
-      try {
+    try {
+      if (available) {
         await chrome.action.setBadgeText({ text: '↑' });
         await chrome.action.setBadgeBackgroundColor({ color: '#3c5aa6' });
-      } catch {
-        // ignore
       }
+    } catch {
+      // ignore
     }
   } catch {
     // best-effort, retry à l'alarm suivante
