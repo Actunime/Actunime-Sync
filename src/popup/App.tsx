@@ -32,7 +32,7 @@ import { useMatchedMedia } from './hooks/useMatchedMedia';
 import { useSiteActivation } from './hooks/useSiteActivation';
 import { useTrackingState } from './hooks/useTrackingState';
 import { useUpdateInfo } from './hooks/useUpdateInfo';
-import { launchAuthFlow, logout, AuthFlowError } from '@/shared/auth-flow';
+import { logout, AuthFlowError } from '@/shared/auth-flow';
 import { WEB_URL } from '@/shared/config';
 import type { DetectionStatusPayload } from '@/shared/messaging';
 
@@ -79,7 +79,10 @@ export function App() {
     setActionState('signing-in');
     setErrorMessage('');
     try {
-      await launchAuthFlow();
+      const res = (await chrome.runtime.sendMessage({ type: 'START_AUTH' })) as
+        | { ok: boolean; error?: string }
+        | undefined;
+      if (res && !res.ok) throw new Error(res.error);
       await refresh();
       setActionState('idle');
     } catch (err) {

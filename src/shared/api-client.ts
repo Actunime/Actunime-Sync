@@ -52,6 +52,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      // L'extension s'authentifie en Bearer : sans ça, le cookie de session du site
+      // peut accompagner la requête et l'API la rejette (403 « Origine refusée »).
+      credentials: 'omit',
       signal,
     });
   } catch (err) {

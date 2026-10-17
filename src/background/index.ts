@@ -26,6 +26,7 @@ import { matchTitle, pickDisplayTitle } from './matcher';
 import { api, entityId } from '@/shared/api-client';
 import { API_URL, WEB_URL } from '@/shared/config';
 import { setupUpdateChecker } from './update-checker';
+import { launchAuthFlow } from '@/shared/auth-flow';
 
 setupUpdateChecker();
 
@@ -736,6 +737,20 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
     (async () => {
       const ok = await api.checkHealth();
       sendResponse({ ok });
+    })();
+    return true;
+  }
+
+  // Le popup se ferme dès que la fenêtre d'autorisation prend le focus : le flow
+  // (et l'échange du code) doit donc vivre dans le service worker.
+  if (message.type === 'START_AUTH') {
+    (async () => {
+      try {
+        await launchAuthFlow();
+        sendResponse({ ok: true });
+      } catch (err) {
+        sendResponse({ ok: false, error: (err as Error)?.message ?? 'Erreur inconnue' });
+      }
     })();
     return true;
   }

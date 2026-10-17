@@ -288,6 +288,7 @@ export type ExtensionMessage =
       };
     }
   | { type: 'AUTH_PING' }
+  | { type: 'START_AUTH' }
   | { type: 'GET_DETECTION' }
   | { type: 'MATCH_BY_DETECTION'; payload: MatchRequestPayload }
   | { type: 'FETCH_IMAGE'; payload: { url: string } }
