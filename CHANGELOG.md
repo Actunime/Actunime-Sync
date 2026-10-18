@@ -1,3 +1,10 @@
+# [1.0.0-beta.13](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-10-18)
+
+
+### Bug Fixes
+
+* **sync:** injecte le content script à la demande et affiche l'erreur si l'assistant ne s'ouvre pas ([3f1d6d6](https://github.com/Actunime/Actunime-Sync/commit/3f1d6d6cdf2edbbb0dee42cadad044882d93d9c7))
+
 # [1.0.0-beta.12](https://github.com/Actunime/Actunime-Sync/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-10-17)
 
 
