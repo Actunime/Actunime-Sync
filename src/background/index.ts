@@ -464,12 +464,22 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
         sendResponse({ ok: false, error: 'Onglet introuvable' });
         return;
       }
+      const send = () =>
+        chrome.tabs.sendMessage(tabId, { type: 'LAUNCH_CONFIG_WIZARD' }, { frameId: 0 });
       try {
-        const res = await chrome.tabs.sendMessage(
-          tabId,
-          { type: 'LAUNCH_CONFIG_WIZARD' },
-          { frameId: 0 },
-        );
+        let res;
+        try {
+          res = await send();
+        } catch {
+          // Content script absent de l'onglet (enregistrement non appliqué, page
+          // chargée avant l'activation…) : on l'injecte à la demande puis on réessaie.
+          await chrome.scripting.executeScript({
+            target: { tabId, frameIds: [0] },
+            files: getContentScriptJs(),
+          });
+          await new Promise((r) => setTimeout(r, 300));
+          res = await send();
+        }
         sendResponse(res ?? { ok: false, error: 'Pas de réponse du content script' });
       } catch (err) {
         sendResponse({

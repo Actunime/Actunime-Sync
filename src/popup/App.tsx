@@ -700,7 +700,7 @@ function ApiHealthBanner() {
 
 function SiteConfigWizardCard() {
   const { host, state } = useSiteActivation();
-  const { pattern, loading, launchWizard, removePattern } = useConfigWizard(host);
+  const { pattern, loading, launchWizard, removePattern, launchError } = useConfigWizard(host);
   const [removing, setRemoving] = useState(false);
 
   if (!host || loading) return null;
@@ -748,6 +748,11 @@ function SiteConfigWizardCard() {
             Retirer
           </button>
         </div>
+        {launchError && (
+          <p className="text-xs text-destructive leading-snug">
+            Impossible d'ouvrir l'assistant : {launchError}
+          </p>
+        )}
       </div>
     );
   }
@@ -772,6 +777,11 @@ function SiteConfigWizardCard() {
         <Wand2 className="size-3.5" />
         Configurer ce site
       </button>
+      {launchError && (
+        <p className="text-xs text-destructive leading-snug">
+          Impossible d'ouvrir l'assistant : {launchError}
+        </p>
+      )}
       <p className="text-[10px] text-muted-foreground leading-snug">
         La configuration reste sur ton ordinateur. Tu peux la partager via Export/Import depuis les
         paramètres.

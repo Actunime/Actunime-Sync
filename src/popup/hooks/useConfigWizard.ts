@@ -10,11 +10,14 @@ interface UseConfigWizardResult {
   /** Retire le pattern appris pour le host courant. */
   removePattern: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Message d'erreur si le wizard n'a pas pu s'ouvrir sur la page (sinon null). */
+  launchError: string | null;
 }
 
 export function useConfigWizard(host: string | null): UseConfigWizardResult {
   const [pattern, setPattern] = useState<LearnedPattern | null>(null);
   const [loading, setLoading] = useState(true);
+  const [launchError, setLaunchError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!host) {
@@ -48,10 +51,20 @@ export function useConfigWizard(host: string | null): UseConfigWizardResult {
   }, [host]);
 
   const launchWizard = useCallback(async () => {
-    await sendMessage({ type: 'LAUNCH_CONFIG_WIZARD' });
-    // Le content script renvoie ok+pattern via la sauvegarde — `chrome.storage.onChanged`
-    // mettra à jour `pattern` automatiquement.
-    // On ferme le popup pour que l'user voie la page (le wizard est en overlay in-page).
+    setLaunchError(null);
+    const res = (await sendMessage({ type: 'LAUNCH_CONFIG_WIZARD' })) as {
+      ok?: boolean;
+      cancelled?: boolean;
+      error?: string;
+    } | null;
+    // Le content script ne répond qu'à la fin du wizard : une erreur ici veut dire
+    // que l'assistant n'a pas pu s'ouvrir — on garde le popup ouvert pour l'afficher.
+    if (res && !res.ok && !res.cancelled) {
+      setLaunchError(res.error ?? "L'assistant n'a pas pu s'ouvrir sur cette page.");
+      return;
+    }
+    // Le wizard est en overlay in-page : on ferme le popup pour que l'user voie la page.
+    // `chrome.storage.onChanged` met `pattern` à jour après la sauvegarde.
     window.close();
   }, []);
 
@@ -61,5 +74,5 @@ export function useConfigWizard(host: string | null): UseConfigWizardResult {
     setPattern(null);
   }, [host]);
 
-  return { pattern, loading, launchWizard, removePattern, refresh };
+  return { pattern, loading, launchWizard, removePattern, refresh, launchError };
 }
