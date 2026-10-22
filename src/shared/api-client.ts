@@ -293,69 +293,21 @@ export const api = {
   },
 
   /**
-   * Cherche une proposition d'ajout PENDING par titre normalisé.
-   * Retourne `{ id }` si une existe, `null` sinon.
+   * Ajout rapide d'une œuvre absente d'Actunime (E124) : l'API crée (ou rejoint) une proposition « Ajout
+   * rapide » et l'entrée de liste correspondante, sans activité publique. Plafond de 50 par membre.
    */
-  findPendingAnimeProposal(title: string) {
-    return request<{ id: string } | null>(
-      `/proposals/find-pending-anime?title=${encodeURIComponent(title)}`,
-    );
-  },
-
-  findPendingMangaProposal(title: string) {
-    return request<{ id: string } | null>(
-      `/proposals/find-pending-manga?title=${encodeURIComponent(title)}`,
-    );
-  },
-
-  /**
-   * Crée une proposition d'ajout (mode CREATION) pour un anime ou un manga.
-   * Retourne `{ id }` du proposal créé.
-   *
-   * Note : le service Proposal côté API itère directement sur
-   * `body.dependencies` / `body.mediaRelations` / etc. sans nullish-check —
-   * on doit envoyer ces tableaux vides explicitement.
-   */
-  createAnimeProposal(body: {
-    title: { original: string; alias?: string[] };
-    country: string;
+  quickAdd(body: {
+    mediaType: 'Anime' | 'Manga';
+    title: string;
     format: string;
-    status: string;
-    poster: { file: string; type: string };
+    status?: string;
+    episodesWatched?: number;
+    chaptersRead?: number;
   }) {
-    return request<{ id: string }>('/proposals', {
-      method: 'POST',
-      body: {
-        mode: 'CREATION',
-        entityType: 'Anime',
-        mainDependency: body,
-        dependencies: [],
-        mediaRelations: [],
-        characterLinks: [],
-        images: [],
-      },
-    });
-  },
-
-  createMangaProposal(body: {
-    title: { original: string; alias?: string[] };
-    country: string;
-    format: string;
-    status: string;
-    poster: { file: string; type: string };
-  }) {
-    return request<{ id: string }>('/proposals', {
-      method: 'POST',
-      body: {
-        mode: 'CREATION',
-        entityType: 'Manga',
-        mainDependency: body,
-        dependencies: [],
-        mediaRelations: [],
-        characterLinks: [],
-        images: [],
-      },
-    });
+    return request<{ entry: ListEntry | null; proposalId: string; joinedExisting: boolean }>(
+      '/lists/quick-add',
+      { method: 'POST', body },
+    );
   },
 
   /**

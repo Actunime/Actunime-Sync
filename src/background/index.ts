@@ -679,58 +679,20 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
         return;
       }
       try {
-        const { kind, title, aliases, format, country, status, coverDataUrl, listStatus } =
-          message.payload;
+        const { kind, title, format, listStatus } = message.payload;
         const mediaType = kind === 'manga' ? 'Manga' : 'Anime';
-        const findPending =
-          kind === 'manga' ? api.findPendingMangaProposal : api.findPendingAnimeProposal;
-        const createProposal = kind === 'manga' ? api.createMangaProposal : api.createAnimeProposal;
-        const defaultListStatus = kind === 'manga' ? 'READING' : 'WATCHING';
-        const cleanAliases = (aliases ?? [])
-          .map((a) => a.trim())
-          .filter((a) => a.length > 0 && a.toLowerCase() !== title.toLowerCase());
-        const titleBody = cleanAliases.length
-          ? { original: title, alias: cleanAliases }
-          : { original: title };
-
-        let proposalId: string;
-        let joinedExisting = false;
-        try {
-          const existing = await findPending(title);
-          if (existing?.id) {
-            proposalId = existing.id;
-            joinedExisting = true;
-          } else {
-            const created = await createProposal({
-              title: titleBody,
-              country,
-              format,
-              status,
-              poster: { file: coverDataUrl, type: 'POSTER' },
-            });
-            proposalId = created.id;
-          }
-        } catch {
-          const created = await createProposal({
-            title: titleBody,
-            country,
-            format,
-            status,
-            poster: { file: coverDataUrl, type: 'POSTER' },
-          });
-          proposalId = created.id;
-        }
-
-        const entry = await api.createListEntryFromProposal({
-          proposalId,
+        const { entry, proposalId, joinedExisting } = await api.quickAdd({
           mediaType,
-          status: listStatus ?? defaultListStatus,
-          preview: { title, coverImage: coverDataUrl },
+          title,
+          format,
+          status: listStatus ?? (kind === 'manga' ? 'READING' : 'WATCHING'),
           episodesWatched: kind === 'anime' ? message.payload.episode : undefined,
           chaptersRead: kind === 'manga' ? message.payload.chapter : undefined,
         });
         const listEntryId =
-          (entry as { id?: string; _id?: string }).id ?? (entry as { _id?: string })._id ?? '';
+          (entry as { id?: string; _id?: string } | null)?.id ??
+          (entry as { _id?: string } | null)?._id ??
+          '';
         sendResponse({ ok: true, proposalId, listEntryId, joinedExisting });
       } catch (err) {
         const msg =

@@ -323,12 +323,7 @@ export type ExtensionMessage =
       payload: {
         kind: 'anime' | 'manga';
         title: string;
-        /** Synonymes / titres alternatifs (anglais, original, abréviations…). */
-        aliases?: string[];
         format: string;
-        country: string;
-        status: string;
-        coverDataUrl: string;
         /** Numéro initial à pré-remplir dans la list entry (épisode pour anime, chapitre pour manga). */
         episode?: number;
         chapter?: number;
